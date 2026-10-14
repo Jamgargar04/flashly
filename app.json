@@ -23,6 +23,10 @@
       "predictiveBackGestureEnabled": false,
       "blockedPermissions": [
         "android.permission.RECORD_AUDIO"
+      ],
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -42,7 +46,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Flashly usa la c\u00e1mara para tomar tu foto del d\u00eda."
+          "cameraPermission": "Flashly usa la cámara para tomar tu foto del día."
         }
       ],
       [
@@ -55,6 +59,13 @@
     "experiments": {
       "typedRoutes": false,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "cca195dd-c0e0-4562-a2e1-de2a7bc1b65b"
+      }
+    },
+    "owner": "jamingarciadev"
   }
 }
