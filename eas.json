@@ -9,14 +9,14 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_FIREBASE_API_KEY": "",
-        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "",
-        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "",
-        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "",
-        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "",
-        "EXPO_PUBLIC_FIREBASE_APP_ID": "",
-        "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME": "",
-        "EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET": ""
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyBEv5XQotR6u35oWh1gaiXIIHKcJMS3ZkU",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "flashly-d0034.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "flashly-d0034",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "flashly-d0034.firebasestorage.app",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "637842005887",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:637842005887:web:797bfea01fbada89ac044a",
+        "EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME": "hc1flzwl",
+        "EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET": "suqbyzk5"
       }
     },
     "production": {
