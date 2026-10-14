@@ -25,28 +25,34 @@ export class CloudinaryPhotoStorage implements PhotoStorage {
   }
 
   private async uploadWithFileSystem(localUri: string, target: PhotoTarget): Promise<string> {
-    let result: FileSystem.FileSystemUploadResult;
+    let base64: string;
     try {
-      result = await FileSystem.uploadAsync(this.endpoint, localUri, {
-        httpMethod: 'POST',
-        uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-        fieldName: 'file',
-        mimeType: 'image/jpeg',
-        parameters: {
-          upload_preset: this.config.uploadPreset,
-          folder: target.folder,
-          public_id: target.name,
-        },
+      base64 = await FileSystem.readAsStringAsync(localUri, {
+        encoding: FileSystem.EncodingType.Base64,
       });
     } catch {
       throw new DomainError('Sin conexión. No se pudo subir la foto.', 'upload-network');
     }
-    let body: CloudinaryResponse;
-    try { body = JSON.parse(result.body) as CloudinaryResponse; } catch { body = {}; }
-    if (result.status < 200 || result.status >= 300)
-      throw new DomainError(body.error?.message ?? 'Cloudinary rechazó la foto.', 'upload-rejected');
-    if (!body.secure_url)
-      throw new DomainError('Cloudinary no devolvió la dirección de la foto.', 'upload-invalid');
+
+    let response: Response;
+    try {
+      response = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file: `data:image/jpeg;base64,${base64}`,
+          upload_preset: this.config.uploadPreset,
+          folder: target.folder,
+          public_id: target.name,
+        }),
+      });
+    } catch {
+      throw new DomainError('Sin conexión. No se pudo subir la foto.', 'upload-network');
+    }
+
+    const body = (await response.json().catch(() => ({}))) as CloudinaryResponse;
+    if (!response.ok) throw new DomainError(body.error?.message ?? 'Cloudinary rechazó la foto.', 'upload-rejected');
+    if (!body.secure_url) throw new DomainError('Cloudinary no devolvió la dirección de la foto.', 'upload-invalid');
     return body.secure_url;
   }
 

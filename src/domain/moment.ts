@@ -39,9 +39,8 @@ export const momentId = (day: string, uid: string): string => `${day}_${uid}`;
 
 export const sanitizeCaption = (caption: string): string => caption.trim().replace(/\s+/g, ' ').slice(0, CAPTION_MAX);
 
-/** Se puede publicar cuando la ventana ya se abrió y aún no publicaste hoy. */
-export const assertCanPublish = (phase: WindowPhase, alreadyPublished: boolean): void => {
-  if (phase === 'waiting') throw new DomainError('La ventana de hoy todavía no se abre.', 'window-closed');
+/** Se puede publicar en cualquier momento del día mientras no hayas publicado ya hoy. */
+export const assertCanPublish = (_phase: WindowPhase, alreadyPublished: boolean): void => {
   if (alreadyPublished) throw new DomainError('Ya publicaste tu momento de hoy.', 'already-published');
 };
 

@@ -15,15 +15,14 @@ describe('reglas del momento', () => {
     expect(sanitizeCaption('x'.repeat(200))).toHaveLength(CAPTION_MAX);
   });
 
-  it('no deja publicar antes de que abra la ventana', () => {
-    expect(() => assertCanPublish('waiting', false)).toThrow('todavía no se abre');
-  });
-
   it('no deja publicar dos veces el mismo día', () => {
     expect(() => assertCanPublish('open', true)).toThrow('Ya publicaste');
+    expect(() => assertCanPublish('waiting', true)).toThrow('Ya publicaste');
+    expect(() => assertCanPublish('closed', true)).toThrow('Ya publicaste');
   });
 
-  it('permite publicar a tiempo y tarde', () => {
+  it('permite publicar en cualquier fase del día', () => {
+    expect(() => assertCanPublish('waiting', false)).not.toThrow();
     expect(() => assertCanPublish('open', false)).not.toThrow();
     expect(() => assertCanPublish('closed', false)).not.toThrow();
     expect(isLate('open')).toBe(false);

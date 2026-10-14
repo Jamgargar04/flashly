@@ -57,7 +57,7 @@ export default function Today() {
   const { window, phase, remaining } = useFlashWindow();
   const { uid, published, moments, refresh, like } = useTodayFeed(window.id, window.start);
   const [refreshing, setRefreshing] = useState(false);
-  const canPublish = !published && phase !== 'waiting';
+  const canPublish = !published;
   const openCamera = () => router.push('/capture');
 
   const onRefresh = () => {

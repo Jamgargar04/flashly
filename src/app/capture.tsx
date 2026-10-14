@@ -88,20 +88,6 @@ export default function Capture() {
     </Pressable>
   );
 
-  if (phase === 'waiting') {
-    return (
-      <View style={[styles.center, { paddingTop: insets.top }]}>
-        <View style={[styles.topBar, { top: insets.top + space.sm }]}>{close}</View>
-        <Txt variant="title2" color="#FFFFFF" center>
-          La ventana aún no se abre
-        </Txt>
-        <Txt variant="subhead" color="rgba(255,255,255,0.6)" center style={{ marginTop: space.sm }}>
-          Te avisaremos cuando sea el momento.
-        </Txt>
-      </View>
-    );
-  }
-
   if (!permission) return <View style={styles.center} />;
   if (!permission.granted) {
     return (
