@@ -10,10 +10,10 @@ import { useClassmates } from '@/application/use-classmates';
 import { usePreference } from '@/application/use-preference';
 
 const PLACES = [
-  { name: 'Biblioteca', count: 12, Icon: BookOpen, color: '#5E5CE6' },
-  { name: 'Cafetería', count: 18, Icon: Coffee, color: '#FF9F0A' },
-  { name: 'Cancha', count: 7, Icon: Trophy, color: '#30B0C7' },
-  { name: 'Laboratorios', count: 9, Icon: FlaskConical, color: '#34C759' },
+  { name: 'Biblioteca', Icon: BookOpen, color: '#5E5CE6' },
+  { name: 'Cafetería', Icon: Coffee, color: '#FF9F0A' },
+  { name: 'Cancha', Icon: Trophy, color: '#30B0C7' },
+  { name: 'Laboratorios', Icon: FlaskConical, color: '#34C759' },
 ];
 
 const EVENTS = [
@@ -70,15 +70,12 @@ export default function Discover() {
       <View style={[styles.pad, { gap: space.md }]}>
         <Txt variant="title2">Lugares con movimiento</Txt>
         <View style={styles.grid}>
-          {PLACES.map(({ name, count, Icon, color }) => (
+          {PLACES.map(({ name, Icon, color }) => (
             <Card key={name} style={styles.place}>
               <View style={[styles.placeIcon, { backgroundColor: color }]}>
                 <Icon size={22} color="#FFFFFF" />
               </View>
               <Txt variant="headline">{name}</Txt>
-              <Txt variant="footnote" color={c.secondary}>
-                {count} momentos hoy
-              </Txt>
             </Card>
           ))}
         </View>

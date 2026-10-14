@@ -78,7 +78,7 @@ export default function Profile() {
           />
         </Group>
 
-        <Group title="Probar la app" footer="Abre la ventana de 2 minutos sin esperar la hora sorpresa. Útil para presentar el avance.">
+        <Group title="Flash ahora" footer="Abre la ventana de 2 minutos sin esperar la hora sorpresa.">
           <Row icon={<Zap size={18} color="#FFFFFF" />} iconColor={brand.flash} title="Abrir la ventana ahora" onPress={onOpenNow} />
           {windowOverride ? (
             <Row icon={<RotateCcw size={18} color="#FFFFFF" />} iconColor="#8E8E93" title="Volver a la hora sorpresa" onPress={() => setWindowOverride(null)} />
