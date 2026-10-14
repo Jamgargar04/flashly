@@ -1,5 +1,3 @@
-import * as FileSystem from 'expo-file-system';
-
 import { DomainError } from '@/domain/domain-error';
 import type { PhotoStorage, PhotoTarget } from '@/domain/ports';
 
@@ -24,36 +22,29 @@ export class CloudinaryPhotoStorage implements PhotoStorage {
       : this.uploadWithFileSystem(localUri, target);
   }
 
-  private async uploadWithFileSystem(localUri: string, target: PhotoTarget): Promise<string> {
-    let base64: string;
-    try {
-      base64 = await FileSystem.readAsStringAsync(localUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-    } catch {
-      throw new DomainError('Sin conexión. No se pudo subir la foto.', 'upload-network');
-    }
+  private uploadWithFileSystem(localUri: string, target: PhotoTarget): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', this.endpoint);
+      xhr.timeout = 60000;
+      xhr.onload = () => {
+        let body: CloudinaryResponse;
+        try { body = JSON.parse(xhr.responseText) as CloudinaryResponse; } catch { body = {}; }
+        if (xhr.status >= 400)
+          return reject(new DomainError(body.error?.message ?? 'Cloudinary rechazó la foto.', 'upload-rejected'));
+        if (!body.secure_url)
+          return reject(new DomainError('Cloudinary no devolvió la dirección de la foto.', 'upload-invalid'));
+        resolve(body.secure_url);
+      };
+      xhr.onerror = () => reject(new DomainError('Sin conexión al subir la foto (XHR).', 'upload-network'));
+      xhr.ontimeout = () => reject(new DomainError('Tiempo agotado al subir la foto.', 'upload-timeout'));
 
-    let response: Response;
-    try {
-      response = await fetch(this.endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          file: `data:image/jpeg;base64,${base64}`,
-          upload_preset: this.config.uploadPreset,
-          folder: target.folder,
-          public_id: target.name,
-        }),
-      });
-    } catch {
-      throw new DomainError('Sin conexión. No se pudo subir la foto.', 'upload-network');
-    }
-
-    const body = (await response.json().catch(() => ({}))) as CloudinaryResponse;
-    if (!response.ok) throw new DomainError(body.error?.message ?? 'Cloudinary rechazó la foto.', 'upload-rejected');
-    if (!body.secure_url) throw new DomainError('Cloudinary no devolvió la dirección de la foto.', 'upload-invalid');
-    return body.secure_url;
+      const form = new FormData();
+      form.append('file', { uri: localUri, type: 'image/jpeg', name: `${target.name}.jpg` } as unknown as Blob);
+      form.append('upload_preset', this.config.uploadPreset);
+      form.append('folder', target.folder);
+      xhr.send(form);
+    });
   }
 
   private async uploadWithFetch(localUri: string, target: PhotoTarget): Promise<string> {
