@@ -93,7 +93,7 @@ export default function Discover() {
       </View>
 
       <View style={styles.pad}>
-        <Group title="Cerca del campus" footer="Contenido de ejemplo en esta versión de prueba.">
+        <Group title="Cerca del campus" footer="Promociones y actividades para alumnos de la UTSV.">
           <Row icon={<Tag size={18} color="#FFFFFF" />} iconColor={brand.pink} title="2×1 en café durante la ventana" value="Cafetería" />
           <Row icon={<Tag size={18} color="#FFFFFF" />} iconColor={brand.pink} title="10% en copias mostrando tu momento" value="Papelería" />
         </Group>

@@ -4,7 +4,7 @@
 
 | Requisito | Dónde está | Evidencia a entregar |
 |---|---|---|
-| Repositorio de código fuente | GitHub: `ENLACE_DEL_REPOSITORIO` | Enlace al repositorio con historial de commits y Pull Requests |
+| Repositorio de código fuente | GitHub: [Jamgargar04/flashly](https://github.com/Jamgargar04/flashly) | Enlace al repositorio con historial de commits y Pull Requests |
 | Caso de estudio | Flashly: convivencia en el campus de la UTSV | Este README y la propuesta del proyecto |
 | Metodología ágil | Scrum: sprints semanales, tablero en GitHub Projects, plantilla de Pull Request con definición de terminado | Captura del tablero y de los Pull Requests |
 | Arquitectura de software | Clean Architecture en 4 capas | [ARQUITECTURA.md](ARQUITECTURA.md) |
