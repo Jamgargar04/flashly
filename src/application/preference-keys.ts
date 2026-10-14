@@ -1,0 +1,7 @@
+/** Claves de las preferencias del usuario guardadas en el teléfono. */
+export const PREFERENCES = {
+  onboarded: 'flashly.onboarded',
+  windowOverride: 'flashly.window.override',
+  reminders: 'flashly.reminders',
+  friends: 'flashly.friends',
+} as const;

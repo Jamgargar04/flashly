@@ -1,0 +1,60 @@
+{
+  "expo": {
+    "name": "Flashly",
+    "slug": "flashly",
+    "version": "0.3.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "flashly",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "mx.edu.utsv.flashly",
+      "icon": "./assets/images/icon.png"
+    },
+    "android": {
+      "package": "mx.edu.utsv.flashly",
+      "adaptiveIcon": {
+        "backgroundColor": "#14102A",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0E0B20",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 140
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Flashly usa la c\u00e1mara para tomar tu foto del d\u00eda."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#7C5CFF"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false,
+      "reactCompiler": true
+    }
+  }
+}

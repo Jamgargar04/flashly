@@ -1,0 +1,17 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /flashly/{day}/{uid}/{file} {
+      allow read: if request.auth != null && request.auth.token.email_verified == true;
+
+      // Solo se usa si eliges Firebase Storage en lugar de Cloudinary (requiere plan Blaze).
+      // Solo el dueño sube sus dos fotos, solo JPG y de máximo 5 MB.
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email_verified == true
+        && file in ['back.jpg', 'front.jpg']
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/jpeg');
+    }
+  }
+}

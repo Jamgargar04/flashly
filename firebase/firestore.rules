@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Solo alumnos con correo institucional verificado.
+    function isStudent() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.matches('.*@alumnos[.]utsv[.]edu[.]mx$');
+    }
+
+    function publishedIn(day) {
+      return exists(/databases/$(database)/documents/moments/$(day + '_' + request.auth.uid));
+    }
+
+    match /users/{uid} {
+      allow read: if isStudent();
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'group', 'email', 'createdAt']);
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /moments/{momentId} {
+      // Cada quien puede consultar si ya publicó (su propio documento).
+      // Para ver los demás hay que haber publicado en la misma ventana: "si no publicas, no ves".
+      allow get: if isStudent()
+        && (momentId.matches('^[0-9-]+_' + request.auth.uid + '$') || publishedIn(resource.data.windowId));
+      allow list: if isStudent() && publishedIn(resource.data.windowId);
+
+      // Una publicación por día: el id siempre es dia_usuario.
+      allow create: if isStudent()
+        && momentId == request.resource.data.windowId + '_' + request.auth.uid
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.caption is string
+        && request.resource.data.caption.size() <= 80
+        && request.resource.data.likes.size() == 0
+        && request.resource.data.backUrl.matches('^https://.*')
+        && request.resource.data.frontUrl.matches('^https://.*');
+
+      // De una publicación ajena solo se pueden cambiar las reacciones.
+      allow update: if isStudent()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']);
+
+      allow delete: if isStudent() && resource.data.authorId == request.auth.uid;
+    }
+
+    match /windows/{day} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /reports/{reportId} {
+      allow create: if isStudent() && request.resource.data.reportedBy == request.auth.uid;
+      allow read, update, delete: if false;
+    }
+  }
+}
