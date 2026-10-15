@@ -17,6 +17,7 @@ export type Moment = {
   back: PhotoSource;
   front: PhotoSource;
   caption: string;
+  location?: string;
   createdAt: number;
   late: boolean;
   likes: string[];
@@ -31,6 +32,7 @@ export type NewMoment = {
   backUrl: string;
   frontUrl: string;
   caption: string;
+  location?: string;
   late: boolean;
 };
 

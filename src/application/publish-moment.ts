@@ -14,6 +14,7 @@ export type PublishMomentInput = {
   backUri: string;
   frontUri: string;
   caption: string;
+  location?: string;
 };
 
 /**
@@ -44,6 +45,7 @@ export const createPublishMoment = ({ compressor, photos, moments }: PublishMome
       backUrl,
       frontUrl,
       caption: sanitizeCaption(input.caption),
+      location: input.location,
       late: isLate(phase),
     });
   };

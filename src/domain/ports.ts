@@ -1,3 +1,4 @@
+import type { CampusEvent } from './event';
 import type { Moment, NewMoment, PhotoSource } from './moment';
 import type { SignInInput, SignUpInput, Student } from './student';
 
@@ -48,6 +49,10 @@ export type Classmate = { id: string; name: string; group: string; avatar?: Phot
 
 export interface CampusDirectory {
   listClassmates(): Promise<Classmate[]>;
+}
+
+export interface EventRepository {
+  listUpcoming(): Promise<CampusEvent[]>;
 }
 
 export interface ReminderScheduler {

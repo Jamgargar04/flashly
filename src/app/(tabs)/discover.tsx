@@ -1,4 +1,5 @@
-import { BookOpen, CalendarDays, Coffee, FlaskConical, Tag, Trophy, UserPlus, UserCheck } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import { BookOpen, CalendarDays, Coffee, FlaskConical, MapPin, Tag, Trophy, UserPlus, UserCheck } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,12 +10,14 @@ import { PREFERENCES } from '@/application/preference-keys';
 import { useClassmates } from '@/application/use-classmates';
 import { usePreference } from '@/application/use-preference';
 import { useLang } from '@/application/use-lang';
+import { useEvents } from '@/application/use-events';
 
 export default function Discover() {
   const c = usePalette();
   const insets = useSafeAreaInsets();
   const { t } = useLang();
   const classmates = useClassmates();
+  const events = useEvents();
   const [friends, setFriends] = usePreference<string[]>(PREFERENCES.friends, []);
 
   const PLACES = [
@@ -22,12 +25,6 @@ export default function Discover() {
     { name: t.discover.place_cafeteria, Icon: Coffee, color: '#FF9F0A' },
     { name: t.discover.place_court, Icon: Trophy, color: '#30B0C7' },
     { name: t.discover.place_labs, Icon: FlaskConical, color: '#34C759' },
-  ];
-
-  const EVENTS = [
-    { title: t.discover.event_1_title, when: t.discover.event_1_when },
-    { title: t.discover.event_2_title, when: t.discover.event_2_when },
-    { title: t.discover.event_3_title, when: t.discover.event_3_when },
   ];
 
   const toggle = (id: string) => {
@@ -83,12 +80,37 @@ export default function Discover() {
         </View>
       </View>
 
-      <View style={styles.pad}>
-        <Group title={t.discover.events}>
-          {EVENTS.map((e) => (
-            <Row key={e.title} icon={<CalendarDays size={18} color="#FFFFFF" />} iconColor={brand.magenta} title={e.title} value={e.when} />
-          ))}
-        </Group>
+      <View style={[styles.pad, { gap: space.md }]}>
+        <Txt variant="title2">{t.discover.events}</Txt>
+        {events.length === 0 ? (
+          <Card>
+            <Txt variant="subhead" color={c.secondary} center>Pronto habrá eventos aquí.</Txt>
+          </Card>
+        ) : (
+          events.map((e) => (
+            <Card key={e.id} padded={false} style={{ overflow: 'hidden' }}>
+              {e.imageUrl ? (
+                <Image source={{ uri: e.imageUrl }} style={styles.eventImage} contentFit="cover" />
+              ) : null}
+              <View style={styles.eventBody}>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Txt variant="headline" numberOfLines={2}>{e.title}</Txt>
+                  {e.description ? <Txt variant="footnote" color={c.secondary} numberOfLines={2}>{e.description}</Txt> : null}
+                  <View style={styles.eventMeta}>
+                    <CalendarDays size={13} color={c.secondary} />
+                    <Txt variant="footnote" color={c.secondary}>{e.when}</Txt>
+                    {e.location ? (
+                      <>
+                        <MapPin size={13} color={c.secondary} />
+                        <Txt variant="footnote" color={c.secondary}>{e.location}</Txt>
+                      </>
+                    ) : null}
+                  </View>
+                </View>
+              </View>
+            </Card>
+          ))
+        )}
       </View>
 
       <View style={styles.pad}>
@@ -108,4 +130,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
   place: { width: '47.8%', gap: 6 },
   placeIcon: { width: 40, height: 40, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginBottom: space.xs },
+  eventImage: { width: '100%', height: 180 },
+  eventBody: { padding: space.lg, flexDirection: 'row', gap: space.md },
+  eventMeta: { flexDirection: 'row', alignItems: 'center', gap: space.xs, flexWrap: 'wrap', marginTop: 2 },
 });

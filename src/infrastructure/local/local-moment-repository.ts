@@ -25,6 +25,7 @@ export class LocalMomentRepository implements MomentRepository {
       back: { uri: moment.backUrl },
       front: { uri: moment.frontUrl },
       caption: moment.caption,
+      location: moment.location,
       createdAt: Date.now(),
       late: moment.late,
       likes: [],

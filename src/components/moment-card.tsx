@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { Heart, Trash2 } from 'lucide-react-native';
+import { Heart, MapPin, Trash2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -36,6 +36,12 @@ export const MomentCard = ({ moment, uid, onLike, onDelete }: { moment: Moment; 
             </Txt>
           ) : null}
         </View>
+        {moment.location ? (
+          <View style={styles.locationBadge}>
+            <MapPin size={11} color="rgba(255,255,255,0.8)" />
+            <Txt variant="caption" color="rgba(255,255,255,0.9)" style={{ fontSize: 11 }}>{moment.location}</Txt>
+          </View>
+        ) : null}
         {moment.late ? <Chip label="Tarde" /> : null}
         <Txt variant="footnote" color={c.secondary}>
           {timeAgo(moment.createdAt)}
@@ -76,4 +82,5 @@ const styles = StyleSheet.create({
   },
   foot: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg },
   like: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  locationBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(0,0,0,0.45)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
 });

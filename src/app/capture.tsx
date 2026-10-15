@@ -4,12 +4,13 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { RefreshCcw, X, Zap } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Txt } from '@/components/ui';
-import { brand, radius, space, type } from '@/constants/theme';
+import { brand, radius, space, type, usePalette } from '@/constants/theme';
+import { CAMPUS_LOCATIONS } from '@/constants/campus-locations';
 import { useSession } from '@/application/session-store';
 import { useFlashWindow } from '@/application/use-flash-window';
 import { usePublishMoment } from '@/application/use-publish-moment';
@@ -30,6 +31,8 @@ export default function Capture() {
   const [front, setFront] = useState<string | null>(null);
   const [swapped, setSwapped] = useState(false);
   const [caption, setCaption] = useState('');
+  const [location, setLocation] = useState<string | null>(null);
+  const c = usePalette();
 
   // Segunda foto automática con la cámara frontal.
   useEffect(() => {
@@ -66,6 +69,7 @@ export default function Capture() {
     setBack(null);
     setFront(null);
     setSwapped(false);
+    setLocation(null);
     setStage('back');
   };
 
@@ -73,7 +77,7 @@ export default function Capture() {
     if (!student || !back || !front) return;
     setStage('publishing');
     try {
-      await publishMoment({ author: student, day: window.id, phase, backUri: back, frontUri: front, caption });
+      await publishMoment({ author: student, day: window.id, phase, backUri: back, frontUri: front, caption, location: location ?? undefined });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       router.back();
     } catch (e) {
@@ -153,6 +157,19 @@ export default function Capture() {
       <View style={[styles.bottom, { paddingBottom: insets.bottom + space.lg }]}>
         {reviewing ? (
           <>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.locationRow}>
+              {CAMPUS_LOCATIONS.map((loc) => {
+                const active = location === loc;
+                return (
+                  <Pressable
+                    key={loc}
+                    onPress={() => setLocation(active ? null : loc)}
+                    style={[styles.locationChip, { backgroundColor: active ? brand.violet : 'rgba(255,255,255,0.15)' }]}>
+                    <Txt variant="caption" color={active ? '#FFFFFF' : 'rgba(255,255,255,0.75)'}>{loc}</Txt>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
             <TextInput
               value={caption}
               onChangeText={(t) => setCaption(t.slice(0, 80))}
@@ -207,4 +224,6 @@ const styles = StyleSheet.create({
   shutterInner: { width: 66, height: 66, borderRadius: 33, backgroundColor: '#FFFFFF' },
   caption: { color: '#FFFFFF', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: radius.md, paddingHorizontal: space.lg, height: 52 },
   actions: { flexDirection: 'row', gap: space.md },
+  locationRow: { gap: space.sm, paddingHorizontal: 2 },
+  locationChip: { paddingHorizontal: space.md, height: 30, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
 });

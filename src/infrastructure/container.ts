@@ -1,5 +1,5 @@
 import type {
-  AuthGateway, CampusDirectory, KeyValueStore, MomentRepository, PhotoCompressor, PhotoStorage, ReminderScheduler,
+  AuthGateway, CampusDirectory, EventRepository, KeyValueStore, MomentRepository, PhotoCompressor, PhotoStorage, ReminderScheduler,
 } from '@/domain/ports';
 
 import { CloudinaryPhotoStorage } from './cloudinary/cloudinary-photo-storage';
@@ -10,11 +10,13 @@ import { getFirebase } from './firebase/firebase-app';
 import { FirebaseAuthGateway } from './firebase/firebase-auth-gateway';
 import { FirebasePhotoStorage } from './firebase/firebase-photo-storage';
 import { FirestoreCampusDirectory } from './firebase/firestore-campus-directory';
+import { FirestoreEventRepository } from './firebase/firestore-event-repository';
 import { FirestoreMomentRepository } from './firebase/firestore-moment-repository';
 import { AsyncStorageStore } from './local/async-storage-store';
 import { demoMoments } from './local/demo-content';
 import { LocalAuthGateway } from './local/local-auth-gateway';
 import { LocalCampusDirectory } from './local/local-campus-directory';
+import { LocalEventRepository } from './local/local-event-repository';
 import { LocalMomentRepository } from './local/local-moment-repository';
 import { LocalPhotoStorage } from './local/local-photo-storage';
 
@@ -27,6 +29,7 @@ export type Services = {
   compressor: PhotoCompressor;
   store: KeyValueStore;
   directory: CampusDirectory;
+  events: EventRepository;
   reminders: ReminderScheduler;
 };
 
@@ -40,6 +43,7 @@ export const createServices = (config: Env = env): Services => {
     store,
     compressor: new ExpoPhotoCompressor(),
     directory: new LocalCampusDirectory(),
+    events: new LocalEventRepository() as EventRepository,
     reminders: new ExpoReminderScheduler(),
   };
 
@@ -64,6 +68,7 @@ export const createServices = (config: Env = env): Services => {
     moments: new FirestoreMomentRepository(firebase.db),
     photos: useCloudinary ? new CloudinaryPhotoStorage(config.cloudinary) : new FirebasePhotoStorage(firebase.storage),
     directory: new FirestoreCampusDirectory(firebase.db),
+    events: new FirestoreEventRepository(firebase.db),
   };
 };
 
