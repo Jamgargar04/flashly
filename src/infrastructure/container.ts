@@ -1,5 +1,5 @@
 import type {
-  AuthGateway, CampusDirectory, EventRepository, KeyValueStore, MomentRepository, PhotoCompressor, PhotoStorage, ReminderScheduler,
+  AuthGateway, CampusDirectory, ChatRepository, EventRepository, KeyValueStore, MomentRepository, PhotoCompressor, PhotoStorage, ReminderScheduler,
 } from '@/domain/ports';
 
 import { CloudinaryPhotoStorage } from './cloudinary/cloudinary-photo-storage';
@@ -10,12 +10,14 @@ import { getFirebase } from './firebase/firebase-app';
 import { FirebaseAuthGateway } from './firebase/firebase-auth-gateway';
 import { FirebasePhotoStorage } from './firebase/firebase-photo-storage';
 import { FirestoreCampusDirectory } from './firebase/firestore-campus-directory';
+import { FirestoreChatRepository } from './firebase/firestore-chat-repository';
 import { FirestoreEventRepository } from './firebase/firestore-event-repository';
 import { FirestoreMomentRepository } from './firebase/firestore-moment-repository';
 import { AsyncStorageStore } from './local/async-storage-store';
 import { demoMoments } from './local/demo-content';
 import { LocalAuthGateway } from './local/local-auth-gateway';
 import { LocalCampusDirectory } from './local/local-campus-directory';
+import { LocalChatRepository } from './local/local-chat-repository';
 import { LocalEventRepository } from './local/local-event-repository';
 import { LocalMomentRepository } from './local/local-moment-repository';
 import { LocalPhotoStorage } from './local/local-photo-storage';
@@ -30,6 +32,7 @@ export type Services = {
   store: KeyValueStore;
   directory: CampusDirectory;
   events: EventRepository;
+  chat: ChatRepository;
   reminders: ReminderScheduler;
 };
 
@@ -44,6 +47,7 @@ export const createServices = (config: Env = env): Services => {
     compressor: new ExpoPhotoCompressor(),
     directory: new LocalCampusDirectory(),
     events: new LocalEventRepository() as EventRepository,
+    chat: new LocalChatRepository() as ChatRepository,
     reminders: new ExpoReminderScheduler(),
   };
 
@@ -69,6 +73,7 @@ export const createServices = (config: Env = env): Services => {
     photos: useCloudinary ? new CloudinaryPhotoStorage(config.cloudinary) : new FirebasePhotoStorage(firebase.storage),
     directory: new FirestoreCampusDirectory(firebase.db),
     events: new FirestoreEventRepository(firebase.db),
+    chat: new FirestoreChatRepository(firebase.db),
   };
 };
 

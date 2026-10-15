@@ -11,6 +11,7 @@ export type Student = {
   name: string;
   group: string;
   bio?: string;
+  isAdmin?: boolean;
   verified: boolean;
 };
 

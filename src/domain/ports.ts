@@ -1,3 +1,4 @@
+import type { ChatMessage } from './chat-message';
 import type { CampusEvent } from './event';
 import type { Moment, NewMoment, PhotoSource } from './moment';
 import type { SignInInput, SignUpInput, Student } from './student';
@@ -53,6 +54,13 @@ export interface CampusDirectory {
 
 export interface EventRepository {
   listUpcoming(): Promise<CampusEvent[]>;
+  create(event: Omit<CampusEvent, 'id'>): Promise<void>;
+  remove(eventId: string): Promise<void>;
+}
+
+export interface ChatRepository {
+  subscribe(onChange: (messages: ChatMessage[]) => void): Unsubscribe;
+  send(authorId: string, authorName: string, text: string): Promise<void>;
 }
 
 export interface ReminderScheduler {

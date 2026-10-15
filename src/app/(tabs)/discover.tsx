@@ -1,5 +1,6 @@
 import { Image } from 'expo-image';
-import { BookOpen, CalendarDays, Coffee, FlaskConical, MapPin, Tag, Trophy, UserPlus, UserCheck } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { BookOpen, CalendarDays, Coffee, FlaskConical, MapPin, MessageCircle, Tag, Trophy, UserPlus, UserCheck } from 'lucide-react-native';
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,7 +34,15 @@ export default function Discover() {
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: c.background }} contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 120, gap: space.xxl }}>
-      <LargeHeader title={t.discover.header} subtitle={t.discover.subtitle} />
+      <LargeHeader
+        title={t.discover.header}
+        subtitle={t.discover.subtitle}
+        right={
+          <Pressable onPress={() => router.push('/campus-chat')} hitSlop={12} accessibilityRole="button" accessibilityLabel="Chat del campus">
+            <MessageCircle size={24} color={c.tint} />
+          </Pressable>
+        }
+      />
 
       <View style={{ gap: space.md }}>
         <Txt variant="title2" style={styles.pad}>

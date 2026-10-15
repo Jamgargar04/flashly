@@ -8,6 +8,7 @@ import React, { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { useSession } from '@/application/session-store';
+import { useFontSize } from '@/application/use-font-size';
 import { useTheme } from '@/application/use-theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -15,7 +16,8 @@ SplashScreen.preventAutoHideAsync().catch(() => undefined);
 export default function RootLayout() {
   const scheme = useColorScheme();
   const [loaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold });
-  useTheme(); // Aplica el tema guardado al iniciar la app
+  useTheme();     // Aplica el tema guardado al iniciar la app
+  useFontSize();  // Carga la preferencia de tamaño de fuente
 
   useEffect(() => useSession.getState().start(), []);
 
@@ -37,6 +39,8 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
           <Stack.Screen name="capture" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', gestureEnabled: false }} />
           <Stack.Screen name="edit-profile" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="campus-chat" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="admin" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         </Stack>
     </ThemeProvider>
   );

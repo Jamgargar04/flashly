@@ -8,6 +8,7 @@ import {
   type ImageSourcePropType, type StyleProp, type TextInputProps, type TextStyle, type ViewStyle,
 } from 'react-native';
 
+import { useFontSizeStore } from '@/application/font-size-store';
 import { brand, gradient, radius, space, type, usePalette } from '@/constants/theme';
 
 type Variant = keyof typeof type;
@@ -21,10 +22,13 @@ export function Txt(props: {
   children: React.ReactNode;
 }) {
   const c = usePalette();
+  const isLarge = useFontSizeStore((s) => s.isLarge);
+  const scale = isLarge ? 1.18 : 1;
+  const base = type[props.variant ?? 'body'];
   return (
     <Text
       numberOfLines={props.numberOfLines}
-      style={[type[props.variant ?? 'body'], { color: props.color ?? c.label }, props.center && { textAlign: 'center' }, props.style]}>
+      style={[base, { fontSize: base.fontSize * scale, lineHeight: base.lineHeight * scale, color: props.color ?? c.label }, props.center && { textAlign: 'center' }, props.style]}>
       {props.children}
     </Text>
   );

@@ -91,7 +91,7 @@ export class FirebaseAuthGateway implements AuthGateway {
       const snap = await getDoc(doc(this.db, 'users', user.uid));
       if (!snap.exists()) return base;
       const d = snap.data();
-      return { ...base, name: String(d.name ?? base.name), group: String(d.group ?? ''), bio: d.bio ? String(d.bio) : undefined };
+      return { ...base, name: String(d.name ?? base.name), group: String(d.group ?? ''), bio: d.bio ? String(d.bio) : undefined, isAdmin: d.isAdmin === true };
     } catch {
       return base;
     }

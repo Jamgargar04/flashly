@@ -1,4 +1,4 @@
-import { collection, getDocs, orderBy, query, where, type Firestore } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, where, type Firestore } from 'firebase/firestore';
 
 import type { CampusEvent } from '@/domain/event';
 import type { EventRepository } from '@/domain/ports';
@@ -22,5 +22,17 @@ export class FirestoreEventRepository implements EventRepository {
       when: String(d.data().when ?? ''),
       location: d.data().location ? String(d.data().location) : undefined,
     }));
+  }
+
+  async create(event: Omit<CampusEvent, 'id'>): Promise<void> {
+    await addDoc(collection(this.db, 'events'), {
+      ...event,
+      active: true,
+      date: serverTimestamp(),
+    });
+  }
+
+  async remove(eventId: string): Promise<void> {
+    await deleteDoc(doc(this.db, 'events', eventId));
   }
 }

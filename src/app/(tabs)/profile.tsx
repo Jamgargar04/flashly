@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { Bell, LogOut, Moon, Pencil, RotateCcw, Shield, Zap } from 'lucide-react-native';
+import { Bell, LogOut, Moon, Pencil, RotateCcw, Shield, ShieldCheck, Type, Zap } from 'lucide-react-native';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { usePreference } from '@/application/use-preference';
 import { usePublishedToday } from '@/application/use-published-today';
 import { useReminders } from '@/application/use-reminders';
 import { useTheme } from '@/application/use-theme';
+import { useFontSize } from '@/application/use-font-size';
 import { useLang } from '@/application/use-lang';
 import { Avatar, Card, Chip, Group, LargeHeader, Row, Txt } from '@/components/ui';
 import { brand, space, usePalette } from '@/constants/theme';
@@ -29,6 +30,7 @@ export default function Profile() {
   const [friends, , reloadFriends] = usePreference<string[]>(PREFERENCES.friends, []);
   const reminders = useReminders();
   const { isDark, toggle: toggleTheme } = useTheme();
+  const { isLarge, toggle: toggleFontSize } = useFontSize();
   const { t, lang, toggleLang } = useLang();
 
   useFocusEffect(reloadFriends);
@@ -83,6 +85,12 @@ export default function Profile() {
             right={<Switch value={isDark} onValueChange={toggleTheme} trackColor={{ true: brand.violet }} />}
           />
           <Row
+            icon={<Type size={18} color="#FFFFFF" />}
+            iconColor="#FF9500"
+            title={t.profile.large_text}
+            right={<Switch value={isLarge} onValueChange={toggleFontSize} trackColor={{ true: brand.violet }} />}
+          />
+          <Row
             icon={<Txt variant="headline" color="#FFFFFF">{lang === 'es' ? 'A' : 'A'}</Txt>}
             iconColor="#007AFF"
             title={t.profile.language}
@@ -106,6 +114,12 @@ export default function Profile() {
             <Row icon={<RotateCcw size={18} color="#FFFFFF" />} iconColor="#8E8E93" title={t.profile.reset_window} onPress={() => setWindowOverride(null)} />
           ) : null}
         </Group>
+
+        {student?.isAdmin ? (
+          <Group>
+            <Row icon={<ShieldCheck size={18} color="#FFFFFF" />} iconColor={brand.violet} title="Panel de administrador" onPress={() => router.push('/admin')} />
+          </Group>
+        ) : null}
 
         <Group>
           <Row icon={<Shield size={18} color="#FFFFFF" />} iconColor="#34C759" title={t.profile.privacy} onPress={() => Alert.alert(t.profile.privacy, t.profile.privacy_text)} />

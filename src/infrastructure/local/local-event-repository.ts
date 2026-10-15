@@ -11,4 +11,6 @@ export class LocalEventRepository implements EventRepository {
   async listUpcoming(): Promise<CampusEvent[]> {
     return DEMO_EVENTS;
   }
+  async create(_event: Omit<CampusEvent, 'id'>): Promise<void> {}
+  async remove(_eventId: string): Promise<void> {}
 }

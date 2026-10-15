@@ -6,4 +6,5 @@ export const PREFERENCES = {
   friends: 'flashly.friends',
   theme: 'flashly.theme',
   lang: 'flashly.lang',
+  largeFonts: 'flashly.largeFonts',
 } as const;
