@@ -5,4 +5,5 @@ export const PREFERENCES = {
   reminders: 'flashly.reminders',
   friends: 'flashly.friends',
   theme: 'flashly.theme',
+  lang: 'flashly.lang',
 } as const;

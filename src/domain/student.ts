@@ -10,6 +10,7 @@ export type Student = {
   email: string;
   name: string;
   group: string;
+  bio?: string;
   verified: boolean;
 };
 

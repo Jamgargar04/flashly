@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { Bell, LogOut, Moon, RotateCcw, Shield, Zap } from 'lucide-react-native';
+import { Bell, LogOut, Moon, Pencil, RotateCcw, Shield, Zap } from 'lucide-react-native';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { usePreference } from '@/application/use-preference';
 import { usePublishedToday } from '@/application/use-published-today';
 import { useReminders } from '@/application/use-reminders';
 import { useTheme } from '@/application/use-theme';
+import { useLang } from '@/application/use-lang';
 import { Avatar, Card, Chip, Group, LargeHeader, Row, Txt } from '@/components/ui';
 import { brand, space, usePalette } from '@/constants/theme';
 
@@ -28,6 +29,7 @@ export default function Profile() {
   const [friends, , reloadFriends] = usePreference<string[]>(PREFERENCES.friends, []);
   const reminders = useReminders();
   const { isDark, toggle: toggleTheme } = useTheme();
+  const { t, lang, toggleLang } = useLang();
 
   useFocusEffect(reloadFriends);
 
@@ -38,67 +40,76 @@ export default function Profile() {
 
   const onOpenNow = async () => {
     await reminders.openWindowNow();
-    Alert.alert('Listo', 'La ventana se abre en 5 segundos. Ve a la pestaña Hoy.');
+    Alert.alert(t.profile.open_now_confirm, t.profile.open_now_msg);
   };
 
   const onSignOut = () =>
-    Alert.alert('Cerrar sesión', '¿Quieres salir de tu cuenta?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Cerrar sesión', style: 'destructive', onPress: () => signOut().then(() => router.replace('/login')) },
+    Alert.alert(t.profile.sign_out_title, t.profile.sign_out_message, [
+      { text: t.common.cancel, style: 'cancel' },
+      { text: t.profile.sign_out_confirm, style: 'destructive', onPress: () => signOut().then(() => router.replace('/login')) },
     ]);
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: c.background }} contentContainerStyle={{ paddingTop: insets.top, paddingBottom: insets.bottom + 120 }}>
-      <LargeHeader title="Perfil" />
+      <LargeHeader title={t.profile.header} />
       <View style={{ paddingHorizontal: space.xl, gap: space.xxl }}>
         <Card style={styles.profile}>
           <Avatar name={student?.name ?? ''} size={84} />
           <View style={{ alignItems: 'center', gap: 4 }}>
             <Txt variant="title2" center>{student?.name || 'Sin nombre'}</Txt>
             <Txt variant="footnote" color={c.secondary} center>{student?.email}</Txt>
+            {student?.bio ? <Txt variant="subhead" color={c.secondary} center>{student.bio}</Txt> : null}
           </View>
           {student?.group ? <Chip label={student.group} /> : null}
+          <Button title={t.profile.edit_profile} variant="secondary" compact icon={<Pencil size={16} color={c.tint} />} onPress={() => router.push('/edit-profile')} style={{ alignSelf: 'stretch' }} />
           <View style={[styles.stats, { borderTopColor: c.separator }]}>
             <View style={styles.stat}>
               <Txt variant="title2">{published ? '1' : '0'}</Txt>
-              <Txt variant="caption" color={c.secondary}>Momentos hoy</Txt>
+              <Txt variant="caption" color={c.secondary}>{t.profile.moments_today}</Txt>
             </View>
             <View style={[styles.statDivider, { backgroundColor: c.separator }]} />
             <View style={styles.stat}>
               <Txt variant="title2">{friends.length}</Txt>
-              <Txt variant="caption" color={c.secondary}>Compañeros</Txt>
+              <Txt variant="caption" color={c.secondary}>{t.profile.classmates}</Txt>
             </View>
           </View>
         </Card>
 
-        <Group title="Apariencia">
+        <Group title={t.profile.appearance}>
           <Row
             icon={<Moon size={18} color="#FFFFFF" />}
             iconColor="#5856D6"
-            title="Modo oscuro"
+            title={t.profile.dark_mode}
             right={<Switch value={isDark} onValueChange={toggleTheme} trackColor={{ true: brand.violet }} />}
+          />
+          <Row
+            icon={<Txt variant="headline" color="#FFFFFF">{lang === 'es' ? 'A' : 'A'}</Txt>}
+            iconColor="#007AFF"
+            title={t.profile.language}
+            value={lang === 'es' ? t.profile.lang_es : t.profile.lang_en}
+            onPress={toggleLang}
           />
         </Group>
 
-        <Group title="Notificaciones" footer="Programa en tu teléfono el aviso sorpresa de los próximos días.">
+        <Group title={t.profile.notifications} footer={t.profile.notif_footer}>
           <Row
             icon={<Bell size={18} color="#FFFFFF" />}
             iconColor="#FF3B30"
-            title="Aviso diario"
+            title={t.profile.daily_reminder}
             right={<Switch value={reminders.enabled} onValueChange={onToggleReminders} trackColor={{ true: brand.violet }} />}
           />
         </Group>
 
-        <Group title="Flash ahora" footer="Abre la ventana de 2 minutos sin esperar la hora sorpresa.">
-          <Row icon={<Zap size={18} color="#FFFFFF" />} iconColor={brand.flash} title="Abrir la ventana ahora" onPress={onOpenNow} />
+        <Group title={t.profile.flash_now} footer={t.profile.flash_now_footer}>
+          <Row icon={<Zap size={18} color="#FFFFFF" />} iconColor={brand.flash} title={t.profile.open_now} onPress={onOpenNow} />
           {windowOverride ? (
-            <Row icon={<RotateCcw size={18} color="#FFFFFF" />} iconColor="#8E8E93" title="Volver a la hora sorpresa" onPress={() => setWindowOverride(null)} />
+            <Row icon={<RotateCcw size={18} color="#FFFFFF" />} iconColor="#8E8E93" title={t.profile.reset_window} onPress={() => setWindowOverride(null)} />
           ) : null}
         </Group>
 
         <Group>
-          <Row icon={<Shield size={18} color="#FFFFFF" />} iconColor="#34C759" title="Aviso de privacidad" onPress={() => Alert.alert('Aviso de privacidad', PRIVACY)} />
-          <Row icon={<LogOut size={18} color="#FFFFFF" />} iconColor="#8E8E93" title="Cerrar sesión" destructive onPress={onSignOut} />
+          <Row icon={<Shield size={18} color="#FFFFFF" />} iconColor="#34C759" title={t.profile.privacy} onPress={() => Alert.alert(t.profile.privacy, t.profile.privacy_text)} />
+          <Row icon={<LogOut size={18} color="#FFFFFF" />} iconColor="#8E8E93" title={t.profile.sign_out} destructive onPress={onSignOut} />
         </Group>
 
         <Txt variant="footnote" color={c.tertiary} center>

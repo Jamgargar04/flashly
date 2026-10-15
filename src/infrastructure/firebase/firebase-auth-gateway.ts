@@ -1,11 +1,11 @@
 import {
   createUserWithEmailAndPassword, onAuthStateChanged, reload, sendEmailVerification,
-  signInWithEmailAndPassword, signOut, updateProfile, type Auth, type User,
+  signInWithEmailAndPassword, signOut, updateProfile as setDisplayName, type Auth, type User,
 } from '@firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc, type Firestore } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
 
 import { DomainError } from '@/domain/domain-error';
-import type { AuthGateway, Unsubscribe } from '@/domain/ports';
+import type { AuthGateway, ProfileUpdate, Unsubscribe } from '@/domain/ports';
 import type { SignInInput, SignUpInput, Student } from '@/domain/student';
 
 const AUTH_MESSAGES: Record<string, string> = {
@@ -45,10 +45,24 @@ export class FirebaseAuthGateway implements AuthGateway {
   async signUp({ name, group, email, password }: SignUpInput): Promise<Student> {
     try {
       const { user } = await createUserWithEmailAndPassword(this.auth, email, password);
-      await updateProfile(user, { displayName: name });
+      await setDisplayName(user, { displayName: name });
       await setDoc(doc(this.db, 'users', user.uid), { name, group, email, createdAt: serverTimestamp() });
       await sendEmailVerification(user);
       return { uid: user.uid, email, name, group, verified: false };
+    } catch (error) {
+      throw toDomainError(error);
+    }
+  }
+
+  async updateProfile({ name, bio, group }: ProfileUpdate): Promise<void> {
+    const user = this.auth.currentUser;
+    if (!user) throw new DomainError('No hay sesión activa.', 'auth');
+    try {
+      await setDisplayName(user, { displayName: name });
+      const data: Record<string, unknown> = { name };
+      if (group !== undefined) data.group = group;
+      if (bio !== undefined) data.bio = bio;
+      await updateDoc(doc(this.db, 'users', user.uid), data);
     } catch (error) {
       throw toDomainError(error);
     }
@@ -76,7 +90,8 @@ export class FirebaseAuthGateway implements AuthGateway {
     try {
       const snap = await getDoc(doc(this.db, 'users', user.uid));
       if (!snap.exists()) return base;
-      return { ...base, name: String(snap.data().name ?? base.name), group: String(snap.data().group ?? '') };
+      const d = snap.data();
+      return { ...base, name: String(d.name ?? base.name), group: String(d.group ?? ''), bio: d.bio ? String(d.bio) : undefined };
     } catch {
       return base;
     }

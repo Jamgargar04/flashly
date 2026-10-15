@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import type { Unsubscribe } from '@/domain/ports';
+import type { ProfileUpdate, Unsubscribe } from '@/domain/ports';
 import { parseOrThrow, signInSchema, signUpSchema, type Student } from '@/domain/student';
 import { services } from '@/infrastructure/container';
 
@@ -22,6 +22,7 @@ type SessionActions = {
   refreshVerification: () => Promise<boolean>;
   resendVerification: () => Promise<void>;
   setWindowOverride: (start: number | null) => Promise<void>;
+  updateProfile: (data: ProfileUpdate) => Promise<void>;
 };
 
 /** Estado global de la sesión con Zustand. Las pantallas solo leen el estado y llaman acciones. */
@@ -75,6 +76,11 @@ export const useSession = create<SessionState & SessionActions>()((set) => ({
   },
 
   resendVerification: () => services.auth.resendVerification(),
+
+  updateProfile: async (data) => {
+    await services.auth.updateProfile(data);
+    set((state) => ({ student: state.student ? { ...state.student, ...data } : null }));
+  },
 
   setWindowOverride: async (start) => {
     if (start === null) await services.store.remove(PREFERENCES.windowOverride);

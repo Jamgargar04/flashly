@@ -7,6 +7,8 @@ import type { SignInInput, SignUpInput, Student } from './student';
  */
 export type Unsubscribe = () => void;
 
+export type ProfileUpdate = { name: string; bio?: string; group?: string };
+
 export interface AuthGateway {
   observe(listener: (student: Student | null) => void): Unsubscribe;
   signIn(input: SignInInput): Promise<void>;
@@ -14,6 +16,7 @@ export interface AuthGateway {
   signOut(): Promise<void>;
   refreshVerification(): Promise<boolean>;
   resendVerification(): Promise<void>;
+  updateProfile(data: ProfileUpdate): Promise<void>;
 }
 
 export interface MomentRepository {

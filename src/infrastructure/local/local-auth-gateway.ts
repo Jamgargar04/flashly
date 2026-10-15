@@ -1,14 +1,14 @@
 import { DomainError } from '@/domain/domain-error';
-import type { AuthGateway, KeyValueStore, Unsubscribe } from '@/domain/ports';
+import type { AuthGateway, KeyValueStore, ProfileUpdate, Unsubscribe } from '@/domain/ports';
 import type { SignInInput, SignUpInput, Student } from '@/domain/student';
 
-type LocalAccounts = Record<string, { name: string; group: string }>;
+type LocalAccounts = Record<string, { name: string; group: string; bio?: string }>;
 
 const ACCOUNTS = 'flashly.local.accounts';
 const SESSION = 'flashly.local.session';
 
 const toStudent = (email: string, account: LocalAccounts[string]): Student => ({
-  uid: 'local-' + email, email, name: account.name, group: account.group, verified: true,
+  uid: 'local-' + email, email, name: account.name, group: account.group, bio: account.bio, verified: true,
 });
 
 /** Modo demostración: cuentas guardadas solo en el teléfono, sin contraseñas almacenadas. */
@@ -54,6 +54,21 @@ export class LocalAuthGateway implements AuthGateway {
 
   async resendVerification(): Promise<void> {
     return undefined;
+  }
+
+  async updateProfile({ name, bio, group }: ProfileUpdate): Promise<void> {
+    const email = await this.store.get<string | null>(SESSION, null);
+    if (!email) throw new DomainError('No hay sesión activa.', 'auth');
+    const accounts = await this.store.get<LocalAccounts>(ACCOUNTS, {});
+    if (!accounts[email]) return;
+    accounts[email] = {
+      ...accounts[email],
+      name,
+      ...(group !== undefined && { group }),
+      ...(bio !== undefined && { bio }),
+    };
+    await this.store.set(ACCOUNTS, accounts);
+    this.emit(toStudent(email, accounts[email]));
   }
 
   private async restore(): Promise<void> {

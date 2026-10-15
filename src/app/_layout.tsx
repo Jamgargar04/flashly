@@ -36,6 +36,7 @@ export default function RootLayout() {
           <Stack.Screen name="verify" />
           <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
           <Stack.Screen name="capture" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', gestureEnabled: false }} />
+          <Stack.Screen name="edit-profile" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
         </Stack>
     </ThemeProvider>
   );
