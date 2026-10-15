@@ -13,6 +13,7 @@ const makeDeps = (alreadyPublished = false) => {
     }),
     observeDay: jest.fn(() => () => undefined),
     toggleLike: jest.fn(async () => undefined),
+    delete: jest.fn(async () => undefined),
   };
   return { compressor, photos, moments, saved };
 };

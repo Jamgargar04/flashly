@@ -9,7 +9,8 @@ describe('validación del estudiante', () => {
 
   it('rechaza correos que no son institucionales', () => {
     expect(() => parseOrThrow(signInSchema, { email: 'alguien@gmail.com', password: '12345678' })).toThrow('Usa tu correo institucional');
-    expect(isInstitutionalEmail('alguien@utsv.edu.mx')).toBe(false);
+    expect(isInstitutionalEmail('alguien@outlook.com')).toBe(false);
+    expect(isInstitutionalEmail('profe@utsv.edu.mx')).toBe(true);
   });
 
   it('exige contraseñas de al menos 8 caracteres', () => {

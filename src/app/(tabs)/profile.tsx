@@ -13,7 +13,7 @@ import { useReminders } from '@/application/use-reminders';
 import { useTheme } from '@/application/use-theme';
 import { useFontSize } from '@/application/use-font-size';
 import { useLang } from '@/application/use-lang';
-import { Avatar, Card, Chip, Group, LargeHeader, Row, Txt } from '@/components/ui';
+import { Avatar, Button, Card, Chip, Group, LargeHeader, Row, Txt } from '@/components/ui';
 import { brand, space, usePalette } from '@/constants/theme';
 
 const PRIVACY =
