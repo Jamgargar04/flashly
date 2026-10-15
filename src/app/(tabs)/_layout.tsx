@@ -8,7 +8,7 @@ export default function TabsLayout() {
   const c = usePalette();
   const { t } = useLang();
   return (
-    <NativeTabs backgroundColor={c.card} indicatorColor={c.fill} labelStyle={{ selected: { color: c.tint } }}>
+    <NativeTabs backgroundColor={c.card} indicatorColor={c.tintFill} labelStyle={{ selected: { color: c.tint } }}>
       <NativeTabs.Trigger name="today">
         <NativeTabs.Trigger.Label>{t.tabs.today}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon src={require('@/assets/images/tabIcons/today.png')} renderingMode="template" />

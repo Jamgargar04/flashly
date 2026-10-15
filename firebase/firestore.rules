@@ -16,17 +16,46 @@ service cloud.firestore {
 
     function isAdmin() {
       return isStudent()
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isAdmin', false) == true;
     }
 
     function publishedIn(day) {
       return exists(/databases/$(database)/documents/moments/$(day + '_' + request.auth.uid));
     }
 
+    function isHttpsUrl(value) {
+      return value is string && value.matches('^https://.*') && value.size() < 600;
+    }
+
+    // Campo opcional: puede faltar, ser null o cumplir la condición.
+    function optionalHttps(data, key) {
+      return !(key in data) || data[key] == null || isHttpsUrl(data[key]);
+    }
+
+    function optionalText(data, key, max) {
+      return !(key in data) || data[key] == null || (data[key] is string && data[key].size() <= max);
+    }
+
     match /users/{uid} {
-      allow read: if isStudent();
-      allow create, update: if signedIn() && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['name', 'group', 'email', 'createdAt', 'bio']);
+      function validProfile(d) {
+        return d.keys().hasOnly(['name', 'group', 'email', 'createdAt', 'bio', 'photoUrl', 'following', 'isAdmin'])
+          && d.name is string && d.name.size() <= 60
+          && optionalText(d, 'group', 40)
+          && optionalText(d, 'bio', 120)
+          && optionalHttps(d, 'photoUrl')
+          && (!('following' in d) || (d.following is list && d.following.size() <= 1000));
+      }
+
+      // Tu propio perfil siempre se puede leer (también antes de verificar el correo).
+      allow read: if isStudent() || (signedIn() && request.auth.uid == uid);
+      allow create: if signedIn() && request.auth.uid == uid
+        && validProfile(request.resource.data)
+        && !('isAdmin' in request.resource.data);
+      // Nadie puede darse permisos de admin a sí mismo ni cambiar su correo.
+      allow update: if signedIn() && request.auth.uid == uid
+        && validProfile(request.resource.data)
+        && request.resource.data.get('isAdmin', false) == resource.data.get('isAdmin', false)
+        && request.resource.data.get('email', '') == resource.data.get('email', '');
       allow delete: if signedIn() && request.auth.uid == uid;
     }
 
@@ -44,14 +73,16 @@ service cloud.firestore {
         && request.resource.data.caption is string
         && request.resource.data.caption.size() <= 80
         && request.resource.data.likes.size() == 0
-        && request.resource.data.backUrl.matches('^https://.*')
-        && request.resource.data.frontUrl.matches('^https://.*');
+        && isHttpsUrl(request.resource.data.backUrl)
+        && isHttpsUrl(request.resource.data.frontUrl)
+        && optionalHttps(request.resource.data, 'authorPhoto');
 
       // De una publicación ajena solo se pueden cambiar las reacciones.
       allow update: if isStudent()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']);
 
-      allow delete: if isStudent() && resource.data.authorId == request.auth.uid;
+      // La autora o un admin (moderación) pueden borrarla.
+      allow delete: if isStudent() && (resource.data.authorId == request.auth.uid || isAdmin());
     }
 
     match /windows/{day} {
@@ -60,25 +91,46 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
-      allow create: if isStudent() && request.resource.data.reportedBy == request.auth.uid;
-      allow read, update, delete: if false;
+      allow create: if isStudent()
+        && request.resource.data.reportedBy == request.auth.uid
+        && request.resource.data.kind in ['moment', 'message']
+        && request.resource.data.targetId is string;
+      allow read: if isAdmin();
+      allow update, delete: if false;
     }
 
-    // Eventos del campus: lectura para usuarios autenticados, escritura solo para admins.
+    // Eventos del campus: los lee cualquiera con sesión; solo los admins los crean o borran.
     match /events/{eventId} {
+      function validEvent(d) {
+        return d.keys().hasOnly(['title', 'description', 'location', 'imageUrl', 'startsAt', 'endsAt', 'createdBy', 'createdAt'])
+          && d.title is string && d.title.size() >= 3 && d.title.size() <= 80
+          && optionalText(d, 'description', 280)
+          && optionalText(d, 'location', 40)
+          && optionalHttps(d, 'imageUrl')
+          && d.startsAt is timestamp && d.endsAt is timestamp && d.endsAt > d.startsAt
+          && d.createdBy == request.auth.uid;
+      }
+
       allow read: if signedIn();
-      allow write: if isAdmin();
+      allow create, update: if isAdmin() && validEvent(request.resource.data);
+      allow delete: if isAdmin();
     }
 
-    // Chat del campus: lectura y escritura para alumnos/maestros verificados.
+    // Chat del campus: alumnos y maestros verificados; cada quien borra lo suyo y los admins moderan.
     match /campusChat/{msgId} {
       allow read: if isStudent();
       allow create: if isStudent()
+        && request.resource.data.keys().hasOnly(['authorId', 'authorName', 'authorPhoto', 'text', 'createdAt'])
         && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.authorName is string
+        && request.resource.data.authorName.size() <= 60
         && request.resource.data.text is string
         && request.resource.data.text.size() > 0
-        && request.resource.data.text.size() <= 200;
-      allow update, delete: if false;
+        && request.resource.data.text.size() <= 200
+        && optionalHttps(request.resource.data, 'authorPhoto')
+        && request.resource.data.createdAt == request.time;
+      allow update: if false;
+      allow delete: if isStudent() && (resource.data.authorId == request.auth.uid || isAdmin());
     }
   }
 }

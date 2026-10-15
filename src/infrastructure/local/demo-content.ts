@@ -1,5 +1,5 @@
 import type { Moment } from '@/domain/moment';
-import type { Classmate } from '@/domain/ports';
+import type { Classmate } from '@/domain/classmate';
 
 const avatar = [
   require('@/assets/demo/avatar1.png'), require('@/assets/demo/avatar2.png'), require('@/assets/demo/avatar3.png'),

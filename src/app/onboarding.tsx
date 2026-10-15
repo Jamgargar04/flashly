@@ -2,42 +2,35 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import Animated, { LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Txt } from '@/components/ui';
-import { space, usePalette } from '@/constants/theme';
 import { useSession } from '@/application/session-store';
+import { useLang } from '@/application/use-lang';
+import { Button, Txt } from '@/components/ui';
+import { motion, space, usePalette } from '@/constants/theme';
 
-const SLIDES = [
-  {
-    image: require('@/assets/onboarding/one.png'),
-    title: 'Conoce a tu generación',
-    body: 'Llevas años en la misma escuela y apenas conoces a unos cuantos. Flashly te muestra quién más está en el campus.',
-  },
-  {
-    image: require('@/assets/onboarding/two.png'),
-    title: 'Un aviso sorpresa al día',
-    body: 'A una hora distinta cada día, todos reciben la misma alerta. Tienes 2 minutos para mostrar qué estás haciendo.',
-  },
-  {
-    image: require('@/assets/onboarding/three.png'),
-    title: 'Si no publicas, no ves',
-    body: 'Para ver los momentos de tus compañeros, primero comparte el tuyo. Todo se borra en 24 horas.',
-  },
-];
+const IMAGES = [require('@/assets/onboarding/one.png'), require('@/assets/onboarding/two.png'), require('@/assets/onboarding/three.png')];
 
 export default function Onboarding() {
   const c = usePalette();
   const insets = useSafeAreaInsets();
+  const { t } = useLang();
   const { width } = useWindowDimensions();
   const finishOnboarding = useSession((s) => s.finishOnboarding);
   const [index, setIndex] = useState(0);
   const list = useRef<FlatList>(null);
-  const last = index === SLIDES.length - 1;
+  const slides = t.onboarding.slides.map((slide, i) => ({ ...slide, image: IMAGES[i] }));
+  const last = index === slides.length - 1;
 
   const done = async () => {
     await finishOnboarding();
     router.replace('/login');
+  };
+
+  const next = () => {
+    list.current?.scrollToIndex({ index: index + 1 });
+    setIndex(index + 1);
   };
 
   return (
@@ -46,18 +39,19 @@ export default function Onboarding() {
         {!last ? (
           <Pressable onPress={done} hitSlop={12} accessibilityRole="button">
             <Txt variant="callout" color={c.tint}>
-              Omitir
+              {t.onboarding.skip}
             </Txt>
           </Pressable>
         ) : null}
       </View>
       <FlatList
         ref={list}
-        data={SLIDES}
+        data={slides}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) => item.title}
+        getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
         onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
         renderItem={({ item }) => (
           <View style={{ width, paddingHorizontal: space.xxl, alignItems: 'center' }}>
@@ -72,14 +66,18 @@ export default function Onboarding() {
         )}
       />
       <View style={styles.dots}>
-        {SLIDES.map((s, i) => (
-          <View key={s.title} style={[styles.dot, { backgroundColor: i === index ? c.label : c.tertiary, width: i === index ? 22 : 8 }]} />
+        {slides.map((slide, i) => (
+          <Animated.View
+            key={slide.title}
+            layout={LinearTransition.springify().damping(motion.spring.snappy.damping)}
+            style={[styles.dot, { backgroundColor: i === index ? c.tint : c.tertiary, width: i === index ? 24 : 8 }]}
+          />
         ))}
       </View>
       <View style={{ paddingHorizontal: space.xl }}>
         <Button
-          title={last ? 'Empezar' : 'Continuar'}
-          onPress={() => (last ? done() : list.current?.scrollToIndex({ index: index + 1 }))}
+          title={last ? t.onboarding.start : t.onboarding.next}
+          onPress={last ? done : next}
         />
       </View>
     </View>

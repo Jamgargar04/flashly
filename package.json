@@ -1,12 +1,12 @@
 {
   "name": "flashly",
   "main": "expo-router/entry",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
-    "@expo/ui": "~57.0.22",
+    "@expo/ui": "~57.0.24",
     "@react-native-async-storage/async-storage": "^2.2.0",
-    "expo": "~57.0.27",
+    "expo": "~57.0.29",
     "expo-blur": "~57.0.3",
     "expo-camera": "~57.0.6",
     "expo-constants": "~57.0.21",
@@ -17,11 +17,12 @@
     "expo-haptics": "~57.0.3",
     "expo-image": "~57.0.5",
     "expo-image-manipulator": "~57.0.21",
+    "expo-image-picker": "~57.0.20",
     "expo-linear-gradient": "~57.0.2",
-    "expo-linking": "~57.0.12",
-    "expo-notifications": "~57.0.22",
-    "expo-router": "~57.0.25",
-    "expo-splash-screen": "~57.0.9",
+    "expo-linking": "~57.0.13",
+    "expo-notifications": "~57.0.23",
+    "expo-router": "~57.0.27",
+    "expo-splash-screen": "~57.0.10",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.3",
     "expo-system-ui": "~57.0.4",
@@ -73,6 +74,8 @@
     "collectCoverageFrom": [
       "src/domain/**/*.ts",
       "src/application/publish-moment.ts",
+      "src/application/publish-event.ts",
+      "src/application/change-avatar.ts",
       "src/infrastructure/cloudinary/**/*.ts",
       "src/infrastructure/local/local-*.ts"
     ]

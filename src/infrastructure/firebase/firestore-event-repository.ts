@@ -1,38 +1,61 @@
-import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, where, type Firestore } from 'firebase/firestore';
+import {
+  addDoc, collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, Timestamp, where,
+  type DocumentData, type Firestore,
+} from 'firebase/firestore';
 
-import type { CampusEvent } from '@/domain/event';
-import type { EventRepository } from '@/domain/ports';
+import { upcomingEvents, type CampusEvent, type NewCampusEvent } from '@/domain/event';
+import type { ErrorListener, EventRepository, Unsubscribe } from '@/domain/ports';
 
-/** Lee la colección "events" de Firestore y devuelve los eventos activos ordenados por fecha. */
+const COLLECTION = 'events';
+
+const toEvent = (id: string, data: DocumentData): CampusEvent | null => {
+  if (!(data.startsAt instanceof Timestamp) || !(data.endsAt instanceof Timestamp)) return null;
+  return {
+    id,
+    title: String(data.title ?? ''),
+    description: data.description ? String(data.description) : undefined,
+    imageUrl: data.imageUrl ? String(data.imageUrl) : undefined,
+    location: data.location ? String(data.location) : undefined,
+    startsAt: data.startsAt.toMillis(),
+    endsAt: data.endsAt.toMillis(),
+    createdBy: String(data.createdBy ?? ''),
+  };
+};
+
+/**
+ * Eventos del campus en tiempo real. Solo trae los que no han terminado
+ * (un filtro y un orden sobre el mismo campo: no necesita índice compuesto).
+ */
 export class FirestoreEventRepository implements EventRepository {
   constructor(private readonly db: Firestore) {}
 
-  async listUpcoming(): Promise<CampusEvent[]> {
-    const q = query(
-      collection(this.db, 'events'),
-      where('active', '==', true),
-      orderBy('date', 'asc'),
+  observeUpcoming(onChange: (events: CampusEvent[]) => void, onError: ErrorListener): Unsubscribe {
+    const q = query(collection(this.db, COLLECTION), where('endsAt', '>', Timestamp.now()), orderBy('endsAt', 'asc'), limit(40));
+    return onSnapshot(
+      q,
+      (snap) => {
+        const events = snap.docs.map((d) => toEvent(d.id, d.data())).filter((e): e is CampusEvent => e !== null);
+        onChange(upcomingEvents(events, Date.now()));
+      },
+      onError,
     );
-    const snap = await getDocs(q);
-    return snap.docs.map((d) => ({
-      id: d.id,
-      title: String(d.data().title ?? ''),
-      description: d.data().description ? String(d.data().description) : undefined,
-      imageUrl: d.data().imageUrl ? String(d.data().imageUrl) : undefined,
-      when: String(d.data().when ?? ''),
-      location: d.data().location ? String(d.data().location) : undefined,
-    }));
   }
 
-  async create(event: Omit<CampusEvent, 'id'>): Promise<void> {
-    await addDoc(collection(this.db, 'events'), {
-      ...event,
-      active: true,
-      date: serverTimestamp(),
+  async create(event: NewCampusEvent): Promise<void> {
+    // Firestore no acepta undefined: los campos opcionales vacíos se guardan como null.
+    await addDoc(collection(this.db, COLLECTION), {
+      title: event.title,
+      description: event.description ?? null,
+      location: event.location ?? null,
+      imageUrl: event.imageUrl ?? null,
+      startsAt: Timestamp.fromMillis(event.startsAt),
+      endsAt: Timestamp.fromMillis(event.endsAt),
+      createdBy: event.createdBy,
+      createdAt: serverTimestamp(),
     });
   }
 
   async remove(eventId: string): Promise<void> {
-    await deleteDoc(doc(this.db, 'events', eventId));
+    await deleteDoc(doc(this.db, COLLECTION, eventId));
   }
 }

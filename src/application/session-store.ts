@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 import type { ProfileUpdate, Unsubscribe } from '@/domain/ports';
-import { parseOrThrow, signInSchema, signUpSchema, type Student } from '@/domain/student';
+import { emailSchema, parseOrThrow, signInSchema, signUpSchema, type Student } from '@/domain/student';
 import { services } from '@/infrastructure/container';
 
 import { PREFERENCES } from './preference-keys';
@@ -21,6 +21,7 @@ type SessionActions = {
   signOut: () => Promise<void>;
   refreshVerification: () => Promise<boolean>;
   resendVerification: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<string>;
   setWindowOverride: (start: number | null) => Promise<void>;
   updateProfile: (data: ProfileUpdate) => Promise<void>;
 };
@@ -42,7 +43,13 @@ export const useSession = create<SessionState & SessionActions>()((set) => ({
       ]);
       if (cancelled) return;
       set({ onboarded, windowOverride });
-      stop = services.auth.observe((student) => set({ student, ready: true }));
+      stop = services.auth.observe((student) =>
+        // Conserva "verificado" si ya se confirmó en esta sesión (el perfil en vivo puede llegar antes del token).
+        set((state) => ({
+          ready: true,
+          student: student && state.student?.uid === student.uid && state.student.verified ? { ...student, verified: true } : student,
+        })),
+      );
     })();
     return () => {
       cancelled = true;
@@ -77,9 +84,18 @@ export const useSession = create<SessionState & SessionActions>()((set) => ({
 
   resendVerification: () => services.auth.resendVerification(),
 
+  /** Valida el correo, envía el enlace y devuelve el correo normalizado para el mensaje. */
+  sendPasswordReset: async (email) => {
+    const valid = parseOrThrow(emailSchema, { email });
+    await services.auth.sendPasswordReset(valid.email);
+    return valid.email;
+  },
+
   updateProfile: async (data) => {
     await services.auth.updateProfile(data);
-    set((state) => ({ student: state.student ? { ...state.student, ...data } : null }));
+    // Solo los campos enviados: un `group: undefined` (maestros) no debe borrar el grupo en memoria.
+    const changes = Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
+    set((state) => ({ student: state.student ? { ...state.student, ...changes } : null }));
   },
 
   setWindowOverride: async (start) => {

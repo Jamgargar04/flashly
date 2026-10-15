@@ -2,140 +2,160 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { RefreshCcw, X, Zap } from 'lucide-react-native';
+import { StatusBar } from 'expo-status-bar';
+import { SwitchCamera, X, Zap, ZapOff } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Linking, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Txt } from '@/components/ui';
-import { brand, radius, space, type, usePalette } from '@/constants/theme';
-import { CAMPUS_LOCATIONS } from '@/constants/campus-locations';
+import type { PublishStep } from '@/application/publish-moment';
 import { useSession } from '@/application/session-store';
+import { toast } from '@/application/toast-store';
 import { useFlashWindow } from '@/application/use-flash-window';
-import { usePublishMoment } from '@/application/use-publish-moment';
+import { useLang } from '@/application/use-lang';
+import { usePublishMoment } from '@/application/use-publishing';
+import { ReviewPanel } from '@/components/capture/review-panel';
+import { useErrorText } from '@/components/localize-error';
 import { mmss } from '@/components/time-format';
-import { messageOf } from '@/domain/domain-error';
+import { Button, IconButton, Txt } from '@/components/ui';
+import { brand, radius, space } from '@/constants/theme';
+import type { CampusPlace } from '@/domain/place';
 
-type Stage = 'back' | 'front' | 'review' | 'publishing';
+type Facing = 'back' | 'front';
+type Stage = 'first' | 'second' | 'review';
+
+const other = (facing: Facing): Facing => (facing === 'back' ? 'front' : 'back');
+
+/** Permiso de cámara: si ya se negó para siempre, lleva directo a los ajustes del teléfono. */
+const PermissionGate = ({ canAskAgain, onRequest }: { canAskAgain: boolean; onRequest: () => void }) => {
+  const insets = useSafeAreaInsets();
+  const { t } = useLang();
+  return (
+    <View style={[styles.center, { paddingHorizontal: space.xxl }]}>
+      <StatusBar style="light" />
+      <View style={[styles.topBar, { top: insets.top + space.sm }]}>
+        <IconButton icon={<X size={22} color="#FFFFFF" />} label={t.common.close} variant="glass" onPress={() => router.back()} />
+      </View>
+      <Txt variant="title2" color="#FFFFFF" center>
+        {t.capture.needCameraTitle}
+      </Txt>
+      <Txt variant="subhead" color="rgba(255,255,255,0.6)" center style={{ marginVertical: space.lg }}>
+        {t.capture.needCameraBody}
+      </Txt>
+      <Button
+        title={canAskAgain ? t.capture.allowCamera : t.common.openSettings}
+        onPress={canAskAgain ? onRequest : () => Linking.openSettings().catch(() => undefined)}
+        style={{ alignSelf: 'stretch' }}
+      />
+    </View>
+  );
+};
 
 export default function Capture() {
   const insets = useSafeAreaInsets();
+  const { t } = useLang();
+  const errorText = useErrorText();
   const student = useSession((s) => s.student);
   const publishMoment = usePublishMoment();
   const { window, phase, remaining } = useFlashWindow();
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
-  const [stage, setStage] = useState<Stage>('back');
-  const [back, setBack] = useState<string | null>(null);
-  const [front, setFront] = useState<string | null>(null);
+  const [stage, setStage] = useState<Stage>('first');
+  const [firstFacing, setFirstFacing] = useState<Facing>('back');
+  const [flash, setFlash] = useState(false);
+  const [photos, setPhotos] = useState<Partial<Record<Facing, string>>>({});
   const [swapped, setSwapped] = useState(false);
   const [caption, setCaption] = useState('');
-  const [location, setLocation] = useState<string | null>(null);
-  const c = usePalette();
+  const [place, setPlace] = useState<CampusPlace | null>(null);
+  const [step, setStep] = useState<PublishStep | null>(null);
+  const facing = stage === 'second' ? other(firstFacing) : firstFacing;
 
-  // Segunda foto automática con la cámara frontal.
+  // La segunda foto se toma sola con la otra cámara.
   useEffect(() => {
-    if (stage !== 'front') return;
+    if (stage !== 'second') return;
     const id = setTimeout(async () => {
       try {
         const shot = await camera.current?.takePictureAsync({ quality: 0.8 });
-        if (shot?.uri) {
-          setFront(shot.uri);
-          setStage('review');
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-        }
+        if (!shot?.uri) throw new Error('no-photo');
+        setPhotos((current) => ({ ...current, [facing]: shot.uri }));
+        setStage('review');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       } catch {
-        setStage('back');
+        toast.error(t.capture.shotError);
+        setPhotos({});
+        setStage('first');
       }
     }, 1100);
     return () => clearTimeout(id);
-  }, [stage]);
+  }, [stage, facing, t]);
+
+  if (!permission) return <View style={styles.center} />;
+  if (!permission.granted) return <PermissionGate canAskAgain={permission.canAskAgain} onRequest={requestPermission} />;
 
   const shoot = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => undefined);
     try {
       const shot = await camera.current?.takePictureAsync({ quality: 0.8 });
-      if (shot?.uri) {
-        setBack(shot.uri);
-        setStage('front');
-      }
+      if (!shot?.uri) return;
+      setPhotos({ [firstFacing]: shot.uri });
+      setStage('second');
     } catch {
-      Alert.alert('No se pudo tomar la foto', 'Intenta de nuevo.');
+      toast.error(t.capture.shotError);
     }
   };
 
   const retake = () => {
-    setBack(null);
-    setFront(null);
+    setPhotos({});
     setSwapped(false);
-    setLocation(null);
-    setStage('back');
+    setStage('first');
   };
 
-  const send = async () => {
-    if (!student || !back || !front) return;
-    setStage('publishing');
+  const publish = async () => {
+    if (!student || !photos.back || !photos.front) return;
+    setStep('compress');
     try {
-      await publishMoment({ author: student, day: window.id, phase, backUri: back, frontUri: front, caption, location: location ?? undefined });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+      await publishMoment(
+        { author: student, day: window.id, phase, backUri: photos.back, frontUri: photos.front, caption, location: place ?? undefined },
+        setStep,
+      );
+      toast.success(t.capture.published);
       router.back();
-    } catch (e) {
-      setStage('review');
-      Alert.alert('No se pudo publicar', messageOf(e, 'Revisa tu conexión e intenta de nuevo.'));
+    } catch (error) {
+      setStep(null);
+      toast.error(errorText(error));
     }
   };
 
-  const close = (
-    <Pressable onPress={() => router.back()} hitSlop={12} accessibilityRole="button" accessibilityLabel="Cerrar" style={styles.round}>
-      <X size={22} color="#FFFFFF" />
-    </Pressable>
-  );
-
-  if (!permission) return <View style={styles.center} />;
-  if (!permission.granted) {
-    return (
-      <View style={[styles.center, { paddingHorizontal: space.xxl }]}>
-        <View style={[styles.topBar, { top: insets.top + space.sm }]}>{close}</View>
-        <Txt variant="title2" color="#FFFFFF" center>
-          Flashly necesita tu cámara
-        </Txt>
-        <Txt variant="subhead" color="rgba(255,255,255,0.6)" center style={{ marginVertical: space.lg }}>
-          Se usa la cámara trasera y la frontal para mostrar lo que haces y quién lo hace.
-        </Txt>
-        <Button title="Permitir cámara" onPress={requestPermission} style={{ alignSelf: 'stretch' }} />
-      </View>
-    );
-  }
-
-  const reviewing = stage === 'review' || stage === 'publishing';
-  const main = swapped ? front : back;
-  const inset = swapped ? back : front;
+  const reviewing = stage === 'review';
+  const main = swapped ? photos.front : photos.back;
+  const inset = swapped ? photos.back : photos.front;
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#000000' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.screen} behavior="padding">
+      <StatusBar style="light" />
       <View style={[styles.frame, { marginTop: insets.top + 60 }]}>
         {reviewing && main ? (
           <Animated.View entering={FadeIn.duration(280)} style={StyleSheet.absoluteFill}>
             <Image source={{ uri: main }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
             <Animated.View entering={ZoomIn.springify().damping(14)} style={styles.inset}>
-              <Pressable onPress={() => setSwapped((s) => !s)} style={StyleSheet.absoluteFill} accessibilityLabel="Intercambiar fotos">
+              <Pressable onPress={() => setSwapped((s) => !s)} style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel={t.moment.swap}>
                 {inset ? <Image source={{ uri: inset }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} /> : null}
               </Pressable>
             </Animated.View>
           </Animated.View>
         ) : (
           <>
-            <CameraView ref={camera} style={StyleSheet.absoluteFill} facing={stage === 'front' ? 'front' : 'back'} mirror={stage === 'front'} animateShutter />
-            {back && stage === 'front' ? (
+            <CameraView ref={camera} style={StyleSheet.absoluteFill} facing={facing} mirror={facing === 'front'} flash={flash ? 'on' : 'off'} animateShutter />
+            {stage === 'second' && photos[firstFacing] ? (
               <Animated.View entering={ZoomIn.springify().damping(14)} style={styles.inset}>
-                <Image source={{ uri: back }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                <Image source={{ uri: photos[firstFacing] }} style={StyleSheet.absoluteFill} contentFit="cover" />
               </Animated.View>
             ) : null}
-            {stage === 'front' ? (
+            {stage === 'second' ? (
               <Animated.View entering={FadeIn.duration(200)} style={styles.hint}>
                 <Txt variant="headline" color="#FFFFFF">
-                  Ahora tú. Sonríe.
+                  {t.capture.secondShot}
                 </Txt>
               </Animated.View>
             ) : null}
@@ -144,63 +164,50 @@ export default function Capture() {
       </View>
 
       <View style={[styles.topBar, { top: insets.top + space.sm }]}>
-        {close}
-        <View style={[styles.pill, { backgroundColor: phase === 'open' ? brand.flash : 'rgba(255,255,255,0.18)' }]}>
-          {phase === 'open' ? <Zap size={16} color={brand.flashInk} fill={brand.flashInk} /> : null}
-          <Txt variant="headline" color={phase === 'open' ? brand.flashInk : '#FFFFFF'}>
-            {phase === 'open' ? mmss(remaining) : 'Publicación tarde'}
-          </Txt>
-        </View>
-        <View style={{ width: 40 }} />
+        <IconButton icon={<X size={22} color="#FFFFFF" />} label={t.common.close} variant="glass" onPress={() => router.back()} disabled={step !== null} />
+        {phase !== 'waiting' ? (
+          <View style={[styles.pill, { backgroundColor: phase === 'open' ? brand.flash : 'rgba(255,255,255,0.18)' }]}>
+            {phase === 'open' ? <Zap size={16} color={brand.flashInk} fill={brand.flashInk} /> : null}
+            <Txt variant="headline" color={phase === 'open' ? brand.flashInk : '#FFFFFF'} style={{ fontVariant: ['tabular-nums'] }}>
+              {phase === 'open' ? mmss(remaining) : t.capture.late}
+            </Txt>
+          </View>
+        ) : null}
+        <IconButton
+          icon={flash ? <Zap size={20} color={brand.flash} fill={brand.flash} /> : <ZapOff size={20} color="#FFFFFF" />}
+          label={flash ? t.capture.flashOn : t.capture.flashOff}
+          variant="glass"
+          onPress={() => setFlash((value) => !value)}
+          disabled={reviewing}
+        />
       </View>
 
       <View style={[styles.bottom, { paddingBottom: insets.bottom + space.lg }]}>
         {reviewing ? (
-          <>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.locationRow}>
-              {CAMPUS_LOCATIONS.map((loc) => {
-                const active = location === loc;
-                return (
-                  <Pressable
-                    key={loc}
-                    onPress={() => setLocation(active ? null : loc)}
-                    style={[styles.locationChip, { backgroundColor: active ? brand.violet : 'rgba(255,255,255,0.15)' }]}>
-                    <Txt variant="caption" color={active ? '#FFFFFF' : 'rgba(255,255,255,0.75)'}>{loc}</Txt>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-            <TextInput
-              value={caption}
-              onChangeText={(t) => setCaption(t.slice(0, 80))}
-              placeholder="Escribe algo (opcional)"
-              placeholderTextColor="rgba(255,255,255,0.45)"
-              style={[type.body, styles.caption]}
-              maxLength={80}
-            />
-            <View style={styles.actions}>
-              <Button title="Repetir" variant="secondary" onPress={retake} disabled={stage === 'publishing'} style={{ flex: 1 }} />
-              <Button title="Publicar" variant="flash" onPress={send} loading={stage === 'publishing'} style={{ flex: 1 }} />
-            </View>
-          </>
+          <ReviewPanel caption={caption} onCaption={setCaption} place={place} onPlace={setPlace} step={step} onRetake={retake} onPublish={publish} />
         ) : (
           <View style={styles.shutterRow}>
             <View style={{ width: 52 }} />
             <Pressable
               onPress={shoot}
-              disabled={stage !== 'back'}
+              disabled={stage !== 'first'}
               accessibilityRole="button"
-              accessibilityLabel="Tomar foto"
-              style={({ pressed }) => [styles.shutter, { transform: [{ scale: pressed ? 0.92 : 1 }], opacity: stage === 'back' ? 1 : 0.5 }]}>
+              accessibilityLabel={t.capture.shutter}
+              style={({ pressed }) => [styles.shutter, { transform: [{ scale: pressed ? 0.92 : 1 }], opacity: stage === 'first' ? 1 : 0.5 }]}>
               <View style={styles.shutterInner} />
             </Pressable>
-            <View style={[styles.round, { width: 52, height: 52, borderRadius: 26 }]}>
-              <RefreshCcw size={22} color="rgba(255,255,255,0.6)" />
-            </View>
+            <IconButton
+              icon={<SwitchCamera size={22} color="#FFFFFF" />}
+              label={t.capture.flip}
+              variant="glass"
+              size={52}
+              disabled={stage !== 'first'}
+              onPress={() => setFirstFacing(other)}
+            />
           </View>
         )}
         <Txt variant="footnote" color="rgba(255,255,255,0.55)" center>
-          {reviewing ? 'Toca la foto pequeña para intercambiarlas.' : 'Se toman las dos cámaras, una tras otra.'}
+          {reviewing ? t.capture.hintReview : t.capture.hintCapture}
         </Txt>
       </View>
     </KeyboardAvoidingView>
@@ -208,22 +215,18 @@ export default function Capture() {
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#000000' },
   center: { flex: 1, backgroundColor: '#000000', alignItems: 'center', justifyContent: 'center', padding: space.xl },
   frame: { marginHorizontal: space.md, aspectRatio: 4 / 5, borderRadius: radius.xl, borderCurve: 'continuous', overflow: 'hidden', backgroundColor: '#14121F' },
   inset: {
     position: 'absolute', top: space.md, left: space.md, width: '30%', aspectRatio: 3 / 4,
-    borderRadius: radius.md, borderCurve: 'continuous', overflow: 'hidden', borderWidth: 2, borderColor: '#FFFFFF', backgroundColor: '#000',
+    borderRadius: radius.md, borderCurve: 'continuous', overflow: 'hidden', borderWidth: 2, borderColor: '#FFFFFF', backgroundColor: '#000000',
   },
   hint: { position: 'absolute', bottom: space.lg, alignSelf: 'center', backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: space.lg, paddingVertical: space.sm, borderRadius: radius.pill },
   topBar: { position: 'absolute', left: space.lg, right: space.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  round: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: space.md, height: 36, borderRadius: radius.pill },
   bottom: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: space.xl, gap: space.lg },
   shutterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.lg },
   shutter: { width: 84, height: 84, borderRadius: 42, borderWidth: 5, borderColor: brand.flash, alignItems: 'center', justifyContent: 'center' },
   shutterInner: { width: 66, height: 66, borderRadius: 33, backgroundColor: '#FFFFFF' },
-  caption: { color: '#FFFFFF', backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: radius.md, paddingHorizontal: space.lg, height: 52 },
-  actions: { flexDirection: 'row', gap: space.md },
-  locationRow: { gap: space.sm, paddingHorizontal: 2 },
-  locationChip: { paddingHorizontal: space.md, height: 30, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
 });

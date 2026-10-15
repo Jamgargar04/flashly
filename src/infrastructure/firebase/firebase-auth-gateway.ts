@@ -1,8 +1,8 @@
 import {
-  createUserWithEmailAndPassword, onAuthStateChanged, reload, sendEmailVerification,
+  createUserWithEmailAndPassword, onAuthStateChanged, reload, sendEmailVerification, sendPasswordResetEmail,
   signInWithEmailAndPassword, signOut, updateProfile as setDisplayName, type Auth, type User,
 } from '@firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc, type Firestore } from 'firebase/firestore';
+import { doc, onSnapshot, serverTimestamp, setDoc, updateDoc, type DocumentData, type Firestore } from 'firebase/firestore';
 
 import { DomainError } from '@/domain/domain-error';
 import type { AuthGateway, ProfileUpdate, Unsubscribe } from '@/domain/ports';
@@ -23,15 +23,50 @@ const toDomainError = (error: unknown): DomainError => {
   return new DomainError(AUTH_MESSAGES[code] ?? 'No pudimos completar la operación. Intenta de nuevo.', code || 'auth');
 };
 
-/** Adaptador de autenticación con Firebase Authentication + perfil en Firestore. */
+const text = (value: unknown): string | undefined => (typeof value === 'string' && value.trim() ? value : undefined);
+
+const toStudent = (user: User, data?: DocumentData): Student => ({
+  uid: user.uid,
+  email: user.email ?? '',
+  name: text(data?.name) ?? user.displayName ?? '',
+  group: text(data?.group) ?? '',
+  bio: text(data?.bio),
+  photoUrl: text(data?.photoUrl),
+  isAdmin: data?.isAdmin === true,
+  verified: user.emailVerified,
+});
+
+/** Adaptador de autenticación con Firebase Authentication + perfil en Firestore (en vivo). */
 export class FirebaseAuthGateway implements AuthGateway {
+  /** Evita que el perfil se cree dos veces mientras signUp lo está creando. */
+  private signingUp = false;
+
   constructor(private readonly auth: Auth, private readonly db: Firestore) {}
 
   observe(listener: (student: Student | null) => void): Unsubscribe {
-    return onAuthStateChanged(this.auth, async (user) => {
-      if (!user) return listener(null);
-      listener(await this.toStudent(user));
+    let stopProfile: Unsubscribe = () => undefined;
+    const stopAuth = onAuthStateChanged(this.auth, (user) => {
+      stopProfile();
+      stopProfile = () => undefined;
+      if (!user) {
+        listener(null);
+        return;
+      }
+      listener(toStudent(user));
+      // El perfil se escucha en vivo: si un admin te da permisos o editas tu perfil, la app se actualiza sola.
+      stopProfile = onSnapshot(
+        doc(this.db, 'users', user.uid),
+        (snap) => {
+          if (snap.exists()) listener(toStudent(user, snap.data()));
+          else if (!this.signingUp) this.createProfile(user, user.displayName ?? '', '').catch(() => undefined);
+        },
+        () => undefined,
+      );
     });
+    return () => {
+      stopProfile();
+      stopAuth();
+    };
   }
 
   async signIn({ email, password }: SignInInput): Promise<void> {
@@ -43,26 +78,28 @@ export class FirebaseAuthGateway implements AuthGateway {
   }
 
   async signUp({ name, group, email, password }: SignUpInput): Promise<Student> {
+    this.signingUp = true;
     try {
       const { user } = await createUserWithEmailAndPassword(this.auth, email, password);
       await setDisplayName(user, { displayName: name });
-      await setDoc(doc(this.db, 'users', user.uid), { name, group, email, createdAt: serverTimestamp() });
+      await this.createProfile(user, name, group);
       await sendEmailVerification(user);
       return { uid: user.uid, email, name, group, verified: false };
     } catch (error) {
       throw toDomainError(error);
+    } finally {
+      this.signingUp = false;
     }
   }
 
-  async updateProfile({ name, bio, group }: ProfileUpdate): Promise<void> {
+  async updateProfile(data: ProfileUpdate): Promise<void> {
     const user = this.auth.currentUser;
     if (!user) throw new DomainError('No hay sesión activa.', 'auth');
+    const changes = Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
+    if (Object.keys(changes).length === 0) return;
     try {
-      await setDisplayName(user, { displayName: name });
-      const data: Record<string, unknown> = { name };
-      if (group !== undefined) data.group = group;
-      if (bio !== undefined) data.bio = bio;
-      await updateDoc(doc(this.db, 'users', user.uid), data);
+      if (data.name) await setDisplayName(user, { displayName: data.name });
+      await updateDoc(doc(this.db, 'users', user.uid), changes);
     } catch (error) {
       throw toDomainError(error);
     }
@@ -77,7 +114,7 @@ export class FirebaseAuthGateway implements AuthGateway {
     if (!user) return false;
     await reload(user);
     // Token nuevo para que las reglas de seguridad vean el correo verificado.
-    await user.getIdToken(true);
+    if (user.emailVerified) await user.getIdToken(true);
     return user.emailVerified;
   }
 
@@ -85,15 +122,20 @@ export class FirebaseAuthGateway implements AuthGateway {
     if (this.auth.currentUser) await sendEmailVerification(this.auth.currentUser);
   }
 
-  private async toStudent(user: User): Promise<Student> {
-    const base: Student = { uid: user.uid, email: user.email ?? '', name: user.displayName ?? '', group: '', verified: user.emailVerified };
+  async sendPasswordReset(email: string): Promise<void> {
     try {
-      const snap = await getDoc(doc(this.db, 'users', user.uid));
-      if (!snap.exists()) return base;
-      const d = snap.data();
-      return { ...base, name: String(d.name ?? base.name), group: String(d.group ?? ''), bio: d.bio ? String(d.bio) : undefined, isAdmin: d.isAdmin === true };
-    } catch {
-      return base;
+      await sendPasswordResetEmail(this.auth, email);
+    } catch (error) {
+      throw toDomainError(error);
     }
+  }
+
+  /** Crea (o completa) el documento del perfil; también repara cuentas a las que les falta. */
+  private async createProfile(user: User, name: string, group: string): Promise<void> {
+    await setDoc(
+      doc(this.db, 'users', user.uid),
+      { name, group, email: user.email ?? '', createdAt: serverTimestamp() },
+      { merge: true },
+    );
   }
 }

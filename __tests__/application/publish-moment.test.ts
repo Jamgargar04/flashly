@@ -11,6 +11,7 @@ const makeDeps = (alreadyPublished = false) => {
     save: jest.fn(async (m: NewMoment) => {
       saved.push(m);
     }),
+    observeOwn: jest.fn(() => () => undefined),
     observeDay: jest.fn(() => () => undefined),
     toggleLike: jest.fn(async () => undefined),
     delete: jest.fn(async () => undefined),

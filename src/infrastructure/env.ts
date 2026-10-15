@@ -25,4 +25,4 @@ export const hasFirebase = (config: Env = env): boolean =>
 export const hasCloudinary = (config: Env = env): boolean =>
   config.cloudinary.cloudName.length > 0 && config.cloudinary.uploadPreset.length > 0;
 
-export const APP_VERSION = '0.3.0';
+export const APP_VERSION = '0.4.0';

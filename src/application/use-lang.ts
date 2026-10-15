@@ -1,10 +1,12 @@
-import { PREFERENCES } from './preference-keys';
-import { usePreference } from './use-preference';
-import { STRINGS, type Lang } from '@/constants/strings';
+import { STRINGS } from '@/constants/strings';
 
+import { usePreferences } from './preferences-store';
+
+/** Textos en el idioma elegido. Cambiar el idioma actualiza todas las pantallas a la vez. */
 export const useLang = () => {
-  const [lang, setLang] = usePreference<Lang>(PREFERENCES.lang, 'es');
-  const t = STRINGS[lang];
-  const toggleLang = () => setLang(lang === 'es' ? 'en' : 'es');
-  return { t, lang, toggleLang };
+  const lang = usePreferences((s) => s.lang);
+  return { lang, t: STRINGS[lang] };
 };
+
+/** Textos fuera de componentes (avisos, notificaciones). */
+export const currentStrings = () => STRINGS[usePreferences.getState().lang];

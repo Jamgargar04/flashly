@@ -29,6 +29,7 @@ export type NewMoment = {
   authorId: string;
   authorName: string;
   authorGroup: string;
+  authorPhoto?: string;
   backUrl: string;
   frontUrl: string;
   caption: string;
@@ -53,3 +54,11 @@ export const toggleLike = (moment: Moment, uid: string): Moment => ({
   ...moment,
   likes: moment.likes.includes(uid) ? moment.likes.filter((id) => id !== uid) : [...moment.likes, uid],
 });
+
+/** Milisegundos que le quedan al momento antes de borrarse (24 h después de publicarse). */
+export const timeToExpire = (moment: Pick<Moment, 'createdAt'>, now: number): number =>
+  Math.max(0, moment.createdAt + MOMENT_TTL_MS - now);
+
+/** Filtro del feed: todos o solo las personas que sigues (tu momento siempre aparece). */
+export const filterFeed = (moments: Moment[], mode: 'all' | 'following', following: string[], uid: string): Moment[] =>
+  mode === 'all' ? moments : moments.filter((m) => m.authorId === uid || following.includes(m.authorId));

@@ -1,103 +1,109 @@
-import { router } from 'expo-router';
-import { Send, X } from 'lucide-react-native';
-import React, { useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, type AlertButton } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useCampusChat } from '@/application/use-campus-chat';
-import { Avatar, Txt } from '@/components/ui';
-import { timeAgo } from '@/components/time-format';
-import { brand, radius, space, type, usePalette } from '@/constants/theme';
+import { useChat } from '@/application/chat-store';
+import { useSession } from '@/application/session-store';
+import { toast } from '@/application/toast-store';
+import { useLang } from '@/application/use-lang';
+import { ChatBubble, DaySeparator } from '@/components/chat-bubble';
+import { ChatComposer } from '@/components/chat-composer';
+import { ChatEmpty, LiveSubtitle } from '@/components/chat-extras';
+import { useErrorText } from '@/components/localize-error';
+import { SheetHeader } from '@/components/ui';
+import { useKeyboardVisible } from '@/components/use-keyboard-visible';
+import { space, usePalette } from '@/constants/theme';
+import { buildChatRows, type ChatRow } from '@/domain/chat-message';
+
+type MessageRow = Extract<ChatRow, { kind: 'message' }>;
 
 export default function CampusChat() {
   const c = usePalette();
   const insets = useSafeAreaInsets();
-  const { messages, send, sending, uid } = useCampusChat();
+  const { t } = useLang();
+  const errorText = useErrorText();
+  const keyboardVisible = useKeyboardVisible();
+  const student = useSession((s) => s.student);
+  const messages = useChat((s) => s.messages);
+  const failed = useChat((s) => s.failed);
+  const loaded = useChat((s) => s.loaded);
   const [text, setText] = useState('');
-  const listRef = useRef<FlatList>(null);
+  const [openedAt] = useState(() => Date.now());
 
-  const submit = async () => {
-    if (!text.trim() || sending) return;
-    const msg = text;
+  // Mientras el chat está abierto, lo que llega cuenta como leído (el contador se limpia solo).
+  const newestId = messages[0]?.id;
+  useFocusEffect(
+    useCallback(() => {
+      useChat.getState().markSeen();
+    }, [newestId]),
+  );
+
+  if (!student) return null;
+
+  const rows = buildChatRows([...failed, ...messages].sort((a, b) => b.createdAt - a.createdAt), student.uid);
+  const failedIds = new Set(failed.map((message) => message.id));
+  const fail = (error: unknown) => toast.error(errorText(error));
+
+  const submit = () => {
+    if (!text.trim()) return;
+    const value = text;
     setText('');
-    await send(msg);
+    void useChat.getState().send(student, value);
+  };
+
+  const confirm = (title: string, body: string, action: string, run: () => Promise<void>) =>
+    Alert.alert(title, body, [
+      { text: t.common.cancel, style: 'cancel' },
+      { text: action, style: 'destructive', onPress: () => run().catch(fail) },
+    ]);
+
+  const onLongPress = ({ message, mine }: MessageRow) => {
+    const remove = () => confirm(t.chat.deleteTitle, t.chat.deleteBody, t.common.delete, () => useChat.getState().remove(message.id).then(() => toast.success(t.chat.deleted)));
+    const report = () =>
+      confirm(t.chat.reportTitle, t.chat.reportBody, t.common.report, () => useChat.getState().report(message, student.uid).then(() => toast.success(t.chat.reported)));
+    if (mine) return remove();
+    const buttons: AlertButton[] = [{ text: t.common.cancel, style: 'cancel' }, { text: t.common.report, onPress: report }];
+    if (student.isAdmin) buttons.push({ text: t.common.delete, style: 'destructive', onPress: remove });
+    Alert.alert(message.authorName, message.text, buttons);
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + space.sm, borderBottomColor: c.separator, backgroundColor: c.card }]}>
-        <Pressable onPress={() => router.back()} hitSlop={12} accessibilityRole="button" style={styles.headerBtn}>
-          <X size={22} color={c.label} />
-        </Pressable>
-        <View style={{ alignItems: 'center' }}>
-          <Txt variant="headline">Chat del campus</Txt>
-          <Txt variant="caption" color={c.secondary}>UTSV — en tiempo real</Txt>
-        </View>
-        <View style={{ width: 40 }} />
-      </View>
-
-      {/* Messages */}
-      <FlatList
-        ref={listRef}
-        data={messages}
-        inverted
-        keyExtractor={(m) => m.id}
-        contentContainerStyle={{ padding: space.lg, gap: space.md }}
-        renderItem={({ item: m }) => {
-          const mine = m.authorId === uid;
-          return (
-            <View style={[styles.bubble, mine && styles.bubbleMine]}>
-              {!mine && <Avatar name={m.authorName} size={30} />}
-              <View style={[styles.bubble_body, { backgroundColor: mine ? brand.violet : c.card }, mine && styles.bubble_body_mine]}>
-                {!mine && <Txt variant="caption" color={c.secondary} style={{ marginBottom: 2 }}>{m.authorName}</Txt>}
-                <Txt variant="subhead" color={mine ? '#FFFFFF' : c.label}>{m.text}</Txt>
-                <Txt variant="caption" color={mine ? 'rgba(255,255,255,0.6)' : c.tertiary} style={{ marginTop: 2, alignSelf: 'flex-end' }}>{timeAgo(m.createdAt)}</Txt>
-              </View>
-            </View>
-          );
-        }}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Txt variant="subhead" color={c.secondary} center>Sé el primero en escribir algo.</Txt>
-          </View>
-        }
-      />
-
-      {/* Input */}
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom + space.sm, borderTopColor: c.separator, backgroundColor: c.card }]}>
-        <TextInput
-          value={text}
-          onChangeText={(v) => setText(v.slice(0, 200))}
-          placeholder="Escribe un mensaje…"
-          placeholderTextColor={c.tertiary}
-          style={[type.body, styles.input, { color: c.label, backgroundColor: c.background }]}
-          returnKeyType="send"
-          onSubmitEditing={submit}
-          multiline={false}
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.background }} behavior="padding">
+      <SheetHeader variant="back" title={t.chat.title} subtitle={<LiveSubtitle />} onClose={() => router.back()} closeLabel={t.common.close} />
+      {!loaded ? (
+        <ActivityIndicator style={styles.loading} color={c.tint} />
+      ) : rows.length === 0 ? (
+        <ChatEmpty onPick={setText} />
+      ) : (
+        <FlatList
+          inverted
+          data={rows}
+          keyExtractor={(row) => row.key}
+          contentContainerStyle={styles.list}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          renderItem={({ item }) =>
+            item.kind === 'day' ? (
+              <DaySeparator at={item.at} />
+            ) : (
+              <ChatBubble
+                row={item}
+                failed={failedIds.has(item.message.id)}
+                fresh={item.message.createdAt > openedAt}
+                onLongPress={onLongPress}
+                onRetry={(row) => void useChat.getState().retry(row.message.id, student)}
+              />
+            )
+          }
         />
-        <Pressable
-          onPress={submit}
-          disabled={!text.trim() || sending}
-          accessibilityRole="button"
-          accessibilityLabel="Enviar"
-          style={[styles.sendBtn, { backgroundColor: brand.violet, opacity: !text.trim() || sending ? 0.4 : 1 }]}>
-          <Send size={18} color="#FFFFFF" />
-        </Pressable>
-      </View>
+      )}
+      <ChatComposer value={text} onChange={setText} onSend={submit} bottomInset={keyboardVisible ? 0 : insets.bottom} />
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: space.lg, paddingBottom: space.md, borderBottomWidth: StyleSheet.hairlineWidth },
-  headerBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  bubble: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm },
-  bubbleMine: { flexDirection: 'row-reverse' },
-  bubble_body: { maxWidth: '75%', padding: space.md, borderRadius: radius.lg, borderCurve: 'continuous', gap: 2 },
-  bubble_body_mine: { borderBottomRightRadius: 4 },
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-  inputBar: { flexDirection: 'row', alignItems: 'center', gap: space.sm, padding: space.md, borderTopWidth: StyleSheet.hairlineWidth },
-  input: { flex: 1, height: 44, borderRadius: radius.md, paddingHorizontal: space.md },
-  sendBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  loading: { flex: 1 },
+  list: { paddingVertical: space.md },
 });

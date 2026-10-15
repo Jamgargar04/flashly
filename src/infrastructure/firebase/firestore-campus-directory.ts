@@ -1,17 +1,29 @@
-import { collection, getDocs, type Firestore } from 'firebase/firestore';
+import { collection, limit, onSnapshot, query, type Firestore } from 'firebase/firestore';
 
-import type { CampusDirectory, Classmate } from '@/domain/ports';
+import type { Classmate } from '@/domain/classmate';
+import type { CampusDirectory, ErrorListener, Unsubscribe } from '@/domain/ports';
 
-/** Lee los usuarios registrados en Firestore y los expone como compañeros de campus. */
+/** Personas registradas en Flashly (colección "users"), en tiempo real. */
 export class FirestoreCampusDirectory implements CampusDirectory {
   constructor(private readonly db: Firestore) {}
 
-  async listClassmates(): Promise<Classmate[]> {
-    const snap = await getDocs(collection(this.db, 'users'));
-    return snap.docs.map((d) => ({
-      id: d.id,
-      name: String(d.data().name ?? ''),
-      group: String(d.data().group ?? ''),
-    }));
+  observe(onChange: (people: Classmate[]) => void, onError: ErrorListener): Unsubscribe {
+    return onSnapshot(
+      query(collection(this.db, 'users'), limit(500)),
+      (snap) =>
+        onChange(
+          snap.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              name: String(data.name ?? ''),
+              group: String(data.group ?? ''),
+              bio: data.bio ? String(data.bio) : undefined,
+              photoUrl: typeof data.photoUrl === 'string' && data.photoUrl ? data.photoUrl : undefined,
+            };
+          }),
+        ),
+      onError,
+    );
   }
 }

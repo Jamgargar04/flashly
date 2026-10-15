@@ -2,13 +2,22 @@ import { DomainError } from '@/domain/domain-error';
 import type { AuthGateway, KeyValueStore, ProfileUpdate, Unsubscribe } from '@/domain/ports';
 import type { SignInInput, SignUpInput, Student } from '@/domain/student';
 
-type LocalAccounts = Record<string, { name: string; group: string; bio?: string }>;
+type LocalAccount = { name: string; group: string; bio?: string; photoUrl?: string };
+type LocalAccounts = Record<string, LocalAccount>;
 
 const ACCOUNTS = 'flashly.local.accounts';
 const SESSION = 'flashly.local.session';
 
-const toStudent = (email: string, account: LocalAccounts[string]): Student => ({
-  uid: 'local-' + email, email, name: account.name, group: account.group, bio: account.bio, verified: true,
+const toStudent = (email: string, account: LocalAccount): Student => ({
+  uid: 'local-' + email,
+  email,
+  name: account.name,
+  group: account.group,
+  bio: account.bio,
+  photoUrl: account.photoUrl,
+  // En modo demostración eres admin para poder probar el panel de eventos.
+  isAdmin: true,
+  verified: true,
 });
 
 /** Modo demostración: cuentas guardadas solo en el teléfono, sin contraseñas almacenadas. */
@@ -56,17 +65,17 @@ export class LocalAuthGateway implements AuthGateway {
     return undefined;
   }
 
-  async updateProfile({ name, bio, group }: ProfileUpdate): Promise<void> {
+  async sendPasswordReset(_email: string): Promise<void> {
+    return undefined;
+  }
+
+  async updateProfile(data: ProfileUpdate): Promise<void> {
     const email = await this.store.get<string | null>(SESSION, null);
     if (!email) throw new DomainError('No hay sesión activa.', 'auth');
     const accounts = await this.store.get<LocalAccounts>(ACCOUNTS, {});
     if (!accounts[email]) return;
-    accounts[email] = {
-      ...accounts[email],
-      name,
-      ...(group !== undefined && { group }),
-      ...(bio !== undefined && { bio }),
-    };
+    const changes = Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
+    accounts[email] = { ...accounts[email], ...changes };
     await this.store.set(ACCOUNTS, accounts);
     this.emit(toStudent(email, accounts[email]));
   }

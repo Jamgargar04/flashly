@@ -1,5 +1,5 @@
 import { DomainError } from '@/domain/domain-error';
-import { isInstitutionalEmail, parseOrThrow, signInSchema, signUpSchema } from '@/domain/student';
+import { completeEmail, isInstitutionalEmail, isTeacherEmail, parseOrThrow, signInSchema, signUpSchema } from '@/domain/student';
 
 describe('validación del estudiante', () => {
   it('acepta el correo institucional y lo normaliza', () => {
@@ -22,13 +22,25 @@ describe('validación del estudiante', () => {
     expect(() => parseOrThrow(signUpSchema, input)).toThrow('Escribe tu nombre completo.');
   });
 
-  it('lanza un DomainError con código de validación', () => {
+  it('lanza un DomainError con el campo en el código (para traducir el mensaje)', () => {
     expect.assertions(2);
     try {
       parseOrThrow(signInSchema, { email: 'x', password: '' });
     } catch (error) {
       expect(error).toBeInstanceOf(DomainError);
-      expect((error as DomainError).code).toBe('validation');
+      expect((error as DomainError).code).toBe('validation/email');
     }
+  });
+
+  it('completa el dominio institucional a partir de la matrícula', () => {
+    expect(completeEmail('DSM123')).toEqual(['dsm123@alumnos.utsv.edu.mx', 'dsm123@utsv.edu.mx']);
+    expect(completeEmail('profe@utsv')).toEqual(['profe@utsv.edu.mx']);
+    expect(completeEmail('ana@alumnos.utsv.edu.mx')).toEqual([]);
+    expect(completeEmail('con espacio')).toEqual([]);
+  });
+
+  it('reconoce los correos de maestros', () => {
+    expect(isTeacherEmail('profe@utsv.edu.mx')).toBe(true);
+    expect(isTeacherEmail('ana@alumnos.utsv.edu.mx')).toBe(false);
   });
 });
