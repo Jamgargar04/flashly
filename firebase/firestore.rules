@@ -6,11 +6,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Solo alumnos con correo institucional verificado.
+    // Alumnos (@alumnos.utsv.edu.mx) y maestros (@utsv.edu.mx) verificados.
     function isStudent() {
       return signedIn()
         && request.auth.token.email_verified == true
-        && request.auth.token.email.matches('.*@alumnos[.]utsv[.]edu[.]mx$');
+        && (request.auth.token.email.matches('.*@alumnos[.]utsv[.]edu[.]mx$')
+            || request.auth.token.email.matches('.*@utsv[.]edu[.]mx$'));
     }
 
     function publishedIn(day) {

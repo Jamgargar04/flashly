@@ -21,6 +21,7 @@ export interface MomentRepository {
   save(moment: NewMoment): Promise<void>;
   observeDay(day: string, windowStart: number, onChange: (moments: Moment[]) => void, onError: (error: Error) => void): Unsubscribe;
   toggleLike(moment: Moment, uid: string): Promise<void>;
+  delete(momentId: string): Promise<void>;
 }
 
 export type PhotoTarget = { folder: string; name: 'back' | 'front' };

@@ -48,6 +48,12 @@ export class LocalMomentRepository implements MomentRepository {
     await this.store.set(LIKES, likes);
   }
 
+  async delete(momentId: string): Promise<void> {
+    const day = momentId.split('_')[0];
+    const own = await this.store.get<Moment[]>(momentsKey(day), []);
+    await this.store.set(momentsKey(day), own.filter((m) => m.id !== momentId));
+  }
+
   private async load(day: string, windowStart: number): Promise<Moment[]> {
     const [own, likes] = await Promise.all([
       this.store.get<Moment[]>(momentsKey(day), []),

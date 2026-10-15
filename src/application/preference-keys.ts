@@ -4,4 +4,5 @@ export const PREFERENCES = {
   windowOverride: 'flashly.window.override',
   reminders: 'flashly.reminders',
   friends: 'flashly.friends',
+  theme: 'flashly.theme',
 } as const;

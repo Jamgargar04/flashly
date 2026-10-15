@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { Bell, LogOut, RotateCcw, Shield, Zap } from 'lucide-react-native';
+import { Bell, LogOut, Moon, RotateCcw, Shield, Zap } from 'lucide-react-native';
 import React from 'react';
 import { Alert, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { useSession } from '@/application/session-store';
 import { usePreference } from '@/application/use-preference';
 import { usePublishedToday } from '@/application/use-published-today';
 import { useReminders } from '@/application/use-reminders';
+import { useTheme } from '@/application/use-theme';
 import { Avatar, Card, Chip, Group, LargeHeader, Row, Txt } from '@/components/ui';
 import { brand, space, usePalette } from '@/constants/theme';
 
@@ -26,6 +27,7 @@ export default function Profile() {
   const published = usePublishedToday();
   const [friends, , reloadFriends] = usePreference<string[]>(PREFERENCES.friends, []);
   const reminders = useReminders();
+  const { isDark, toggle: toggleTheme } = useTheme();
 
   useFocusEffect(reloadFriends);
 
@@ -68,6 +70,15 @@ export default function Profile() {
             </View>
           </View>
         </Card>
+
+        <Group title="Apariencia">
+          <Row
+            icon={<Moon size={18} color="#FFFFFF" />}
+            iconColor="#5856D6"
+            title="Modo oscuro"
+            right={<Switch value={isDark} onValueChange={toggleTheme} trackColor={{ true: brand.violet }} />}
+          />
+        </Group>
 
         <Group title="Notificaciones" footer="Programa en tu teléfono el aviso sorpresa de los próximos días.">
           <Row

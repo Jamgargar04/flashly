@@ -9,7 +9,7 @@ import { space, usePalette } from '@/constants/theme';
 import { appInfo } from '@/application/app-info';
 import { useSession } from '@/application/session-store';
 import { messageOf } from '@/domain/domain-error';
-import { INSTITUTION_DOMAIN } from '@/domain/student';
+import { INSTITUTION_DOMAIN, isTeacherEmail } from '@/domain/student';
 
 export default function Login() {
   const c = usePalette();
@@ -25,6 +25,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const signup = mode === 'signup';
+  const isTeacher = isTeacherEmail(email);
 
   // Navega cuando la sesión realmente existe (Firebase la confirma de forma asíncrona).
   useEffect(() => {
@@ -53,7 +54,7 @@ export default function Login() {
         <View style={{ gap: space.sm }}>
           <Txt variant="largeTitle">{signup ? 'Crea tu cuenta' : 'Entra a Flashly'}</Txt>
           <Txt variant="body" color={c.secondary}>
-            {signup ? 'Solo para alumnos de la UTSV, con tu correo institucional.' : 'Usa tu correo institucional para continuar.'}
+            {signup ? 'Para alumnos y maestros de la UTSV, con tu correo institucional.' : 'Usa tu correo institucional para continuar.'}
           </Txt>
         </View>
 
@@ -70,7 +71,9 @@ export default function Login() {
           {signup ? (
             <>
               <Field label="Nombre completo" value={name} onChangeText={setName} placeholder="Ana Ruiz" autoComplete="name" textContentType="name" />
-              <Field label="Grupo y carrera" value={group} onChangeText={setGroup} placeholder="10-A · Software" />
+              {!isTeacher ? (
+                <Field label="Grupo y carrera" value={group} onChangeText={setGroup} placeholder="10-A · Software" />
+              ) : null}
             </>
           ) : null}
           <Field

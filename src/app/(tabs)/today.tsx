@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Camera, Zap } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,6 +10,7 @@ import { useTodayFeed } from '@/application/use-today-feed';
 import { FlashRing } from '@/components/flash-ring';
 import { LockedFeed } from '@/components/locked-feed';
 import { MomentCard } from '@/components/moment-card';
+import type { Moment } from '@/domain/moment';
 import { clock, longDate, mmss } from '@/components/time-format';
 import { Button, Card, LargeHeader, Txt } from '@/components/ui';
 import { brand, space, usePalette } from '@/constants/theme';
@@ -43,7 +44,7 @@ const RingContent = ({ phase, remaining, published, start }: { phase: WindowPhas
   }
   return (
     <View style={{ alignItems: 'center', paddingHorizontal: space.xl }}>
-      <Txt variant="title2" center>{phase === 'waiting' ? 'Aún no' : published ? 'Listo' : 'Se cerró'}</Txt>
+      <Txt variant="title2" center>{phase === 'waiting' ? 'Aún no' : published ? 'Listo' : 'Publica'}</Txt>
       <Txt variant="footnote" color={c.secondary} center>
         {phase === 'waiting' ? 'Puede ser en cualquier momento' : `La ventana fue a las ${clock(start)}`}
       </Txt>
@@ -55,10 +56,16 @@ export default function Today() {
   const c = usePalette();
   const insets = useSafeAreaInsets();
   const { window, phase, remaining } = useFlashWindow();
-  const { uid, published, moments, refresh, like } = useTodayFeed(window.id, window.start);
+  const { uid, published, moments, refresh, like, deleteMoment } = useTodayFeed(window.id, window.start);
   const [refreshing, setRefreshing] = useState(false);
   const canPublish = !published;
   const openCamera = () => router.push('/capture');
+
+  const confirmDelete = (m: Moment) =>
+    Alert.alert('Borrar momento', '¿Quieres borrar tu momento de hoy?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Borrar', style: 'destructive', onPress: () => deleteMoment(m) },
+    ]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -113,7 +120,12 @@ export default function Today() {
           ) : (
             moments.map((m, i) => (
               <Animated.View key={m.id} entering={FadeInDown.delay(Math.min(i, 6) * 70).springify().damping(18)} layout={LinearTransition.springify().damping(18)}>
-                <MomentCard moment={m} uid={uid} onLike={like} />
+                <MomentCard
+                  moment={m}
+                  uid={uid}
+                  onLike={like}
+                  onDelete={m.authorId === uid ? () => confirmDelete(m) : undefined}
+                />
               </Animated.View>
             ))
           )}

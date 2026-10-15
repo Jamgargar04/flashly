@@ -8,12 +8,14 @@ import React, { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { useSession } from '@/application/session-store';
+import { useTheme } from '@/application/use-theme';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 export default function RootLayout() {
   const scheme = useColorScheme();
   const [loaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, Inter_800ExtraBold });
+  useTheme(); // Aplica el tema guardado al iniciar la app
 
   useEffect(() => useSession.getState().start(), []);
 

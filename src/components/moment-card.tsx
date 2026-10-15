@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { Heart } from 'lucide-react-native';
+import { Heart, Trash2 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -10,7 +10,7 @@ import type { Moment } from '@/domain/moment';
 import { timeAgo } from './time-format';
 import { Avatar, Card, Chip, Txt } from './ui';
 
-export const MomentCard = ({ moment, uid, onLike }: { moment: Moment; uid: string; onLike: (moment: Moment) => void }) => {
+export const MomentCard = ({ moment, uid, onLike, onDelete }: { moment: Moment; uid: string; onLike: (moment: Moment) => void; onDelete?: () => void }) => {
   const c = usePalette();
   const [swapped, setSwapped] = useState(false);
   const liked = moment.likes.includes(uid);
@@ -40,6 +40,11 @@ export const MomentCard = ({ moment, uid, onLike }: { moment: Moment; uid: strin
         <Txt variant="footnote" color={c.secondary}>
           {timeAgo(moment.createdAt)}
         </Txt>
+        {onDelete ? (
+          <Pressable hitSlop={12} accessibilityRole="button" accessibilityLabel="Borrar momento" onPress={onDelete}>
+            <Trash2 size={18} color={c.secondary} />
+          </Pressable>
+        ) : null}
       </View>
       <View style={styles.media}>
         <Image source={main} style={StyleSheet.absoluteFill} contentFit="cover" transition={220} />

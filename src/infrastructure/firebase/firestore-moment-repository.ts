@@ -1,5 +1,5 @@
 import {
-  arrayRemove, arrayUnion, collection, doc, getDoc, limit, onSnapshot, orderBy, query,
+  arrayRemove, arrayUnion, collection, deleteDoc, doc, getDoc, limit, onSnapshot, orderBy, query,
   serverTimestamp, setDoc, Timestamp, updateDoc, where, type DocumentData, type Firestore,
 } from 'firebase/firestore';
 
@@ -68,5 +68,9 @@ export class FirestoreMomentRepository implements MomentRepository {
   async toggleLike(moment: Moment, uid: string): Promise<void> {
     const liked = moment.likes.includes(uid);
     await updateDoc(doc(this.db, COLLECTION, moment.id), { likes: liked ? arrayRemove(uid) : arrayUnion(uid) });
+  }
+
+  async delete(momentId: string): Promise<void> {
+    await deleteDoc(doc(this.db, COLLECTION, momentId));
   }
 }

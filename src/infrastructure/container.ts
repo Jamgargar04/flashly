@@ -9,6 +9,7 @@ import { env, hasCloudinary, hasFirebase, type Env } from './env';
 import { getFirebase } from './firebase/firebase-app';
 import { FirebaseAuthGateway } from './firebase/firebase-auth-gateway';
 import { FirebasePhotoStorage } from './firebase/firebase-photo-storage';
+import { FirestoreCampusDirectory } from './firebase/firestore-campus-directory';
 import { FirestoreMomentRepository } from './firebase/firestore-moment-repository';
 import { AsyncStorageStore } from './local/async-storage-store';
 import { demoMoments } from './local/demo-content';
@@ -62,6 +63,7 @@ export const createServices = (config: Env = env): Services => {
     auth: new FirebaseAuthGateway(firebase.auth, firebase.db),
     moments: new FirestoreMomentRepository(firebase.db),
     photos: useCloudinary ? new CloudinaryPhotoStorage(config.cloudinary) : new FirebasePhotoStorage(firebase.storage),
+    directory: new FirestoreCampusDirectory(firebase.db),
   };
 };
 

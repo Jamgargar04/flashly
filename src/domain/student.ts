@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { DomainError } from './domain-error';
 
 export const INSTITUTION_DOMAIN = 'alumnos.utsv.edu.mx';
+export const TEACHER_DOMAIN = 'utsv.edu.mx';
 
 export type Student = {
   uid: string;
@@ -17,7 +18,10 @@ const institutionalEmail = z
   .trim()
   .toLowerCase()
   .email('Escribe un correo válido.')
-  .refine((email) => email.endsWith('@' + INSTITUTION_DOMAIN), `Usa tu correo institucional @${INSTITUTION_DOMAIN}.`);
+  .refine(
+    (email) => email.endsWith('@' + INSTITUTION_DOMAIN) || email.endsWith('@' + TEACHER_DOMAIN),
+    `Usa tu correo institucional @${INSTITUTION_DOMAIN} o @${TEACHER_DOMAIN}.`,
+  );
 
 const password = z.string().min(8, 'La contraseña necesita al menos 8 caracteres.');
 
@@ -39,3 +43,7 @@ export const parseOrThrow = <T>(schema: z.ZodType<T>, data: unknown): T => {
 };
 
 export const isInstitutionalEmail = (email: string): boolean => institutionalEmail.safeParse(email).success;
+
+export const isTeacherEmail = (email: string): boolean =>
+  email.trim().toLowerCase().endsWith('@' + TEACHER_DOMAIN) &&
+  !email.trim().toLowerCase().endsWith('@' + INSTITUTION_DOMAIN);

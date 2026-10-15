@@ -37,5 +37,14 @@ export const useTodayFeed = (day: string, windowStart: number) => {
     [uid, refresh],
   );
 
-  return { uid, published, moments, refresh, like };
+  const deleteMoment = useCallback(
+    (moment: Moment) => {
+      setMoments((list) => list.filter((m) => m.id !== moment.id));
+      if (moment.authorId === uid) setPublished(false);
+      services.moments.delete(moment.id).catch(() => refresh());
+    },
+    [uid, refresh],
+  );
+
+  return { uid, published, moments, refresh, like, deleteMoment };
 };
